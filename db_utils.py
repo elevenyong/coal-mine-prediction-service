@@ -189,42 +189,66 @@ class DBUtils:
                 # Step 1: 创建核心参数表 t_prediction_parameters，移除了gas_analysis_index_dh2 FLOAT COMMENT '瓦斯解析指数Δh2（Pa）',
                 create_pred_sql = text("""
                 CREATE TABLE IF NOT EXISTS t_prediction_parameters (
-                    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '自增主键',
-                    working_face VARCHAR(50) NOT NULL COMMENT '工作面名称',
-                    workface_id INT COMMENT '工作面ID（关联t_geo_fault）',
-                    roadway VARCHAR(50) COMMENT '巷道名称',
-                    roadway_id VARCHAR(20) COMMENT '巷道ID',
-                    distance_from_entrance FLOAT COMMENT '距入口距离（m）',
-                    x_coord FLOAT COMMENT 'X坐标（m）',
-                    y_coord FLOAT COMMENT 'Y坐标（m）',
-                    z_coord FLOAT COMMENT 'Z坐标（高程，m）',
-                    coal_thickness FLOAT COMMENT '煤层厚度（m）',
-                    fault_influence_strength FLOAT COMMENT '断层影响系数（系统自动计算）',
-                    regional_measure_strength INT COMMENT '区域措施强度（需提前计算）',
-                    tunneling_speed FLOAT COMMENT '掘进速度（m/min）',
-                    roadway_length FLOAT COMMENT '巷道长度（m）',
-                    initial_gas_emission_strength FLOAT COMMENT '初始瓦斯涌出强度',
-                    roadway_cross_section FLOAT COMMENT '巷道断面积（m²）',
-                    coal_density FLOAT COMMENT '煤密度（t/m³）',
-                    original_gas_content FLOAT COMMENT '原始瓦斯含量（m³/t）',
-                    residual_gas_content FLOAT COMMENT '残余瓦斯含量（m³/t）',
-                    gas_emission_q FLOAT COMMENT '瓦斯涌出量Q（m³/min）',
-                    drilling_cuttings_s FLOAT COMMENT '钻屑量S（kg/m）',
-                    gas_emission_velocity_q FLOAT COMMENT '瓦斯涌出速度q（L/min·m）',
-                    
-                    gas_emission_wall FLOAT COMMENT '煤壁瓦斯涌出量（m³/min）',
-                    gas_emission_fallen FLOAT COMMENT '落煤瓦斯涌出量（m³/min）',
-                    total_gas_emission FLOAT COMMENT '总瓦斯涌出量（m³/min）',
-                    measurement_date DATE COMMENT '测量日期（YYYY-MM-DD）',
-                    depth_from_face FLOAT COMMENT '验证孔深度/测点距工作面距离（m）',
-                    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                    INDEX idx_working_face (working_face),
-                    INDEX idx_roadway (roadway_id),
-                    INDEX idx_create_time (create_time),
-                    INDEX idx_measurement_date (measurement_date) COMMENT '测量日期索引',
-                    INDEX idx_depth_from_face (depth_from_face) COMMENT '验证孔深度索引'
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='瓦斯预测核心参数表（简化时间特征）';
-                """)
+                id INT AUTO_INCREMENT PRIMARY KEY COMMENT '自增主键',
+                working_face VARCHAR(50) NOT NULL COMMENT '工作面名称',
+                workface_id INT COMMENT '工作面ID',
+                roadway VARCHAR(50) COMMENT '巷道名称',
+                roadway_id VARCHAR(20) COMMENT '巷道ID',
+                
+                -- 空间坐标
+                x_coord FLOAT COMMENT 'X坐标（m）',
+                y_coord FLOAT COMMENT 'Y坐标（m）',
+                z_coord FLOAT COMMENT 'Z坐标（高程，m）',
+                distance_from_entrance FLOAT COMMENT '距入口距离（m）',
+                
+                -- 钻孔信息
+                borehole_id VARCHAR(50) COMMENT '钻孔编号',
+                drilling_depth FLOAT COMMENT '钻孔深度（m）',
+                
+                -- 时间信息
+                measurement_date DATE COMMENT '测量日期',
+                measurement_time TIME COMMENT '测量时间',
+                
+                -- 工作面推进信息
+                distance_to_face FLOAT COMMENT '距采面距离（m）',
+                face_advance_distance FLOAT COMMENT '工作面推进距离（m）',
+                advance_rate FLOAT COMMENT '推进速率（m/天）',
+                
+                -- 基础特征
+                coal_thickness FLOAT COMMENT '煤层厚度（m）',
+                fault_influence_strength FLOAT COMMENT '断层影响系数',
+                regional_measure_strength INT COMMENT '区域措施强度',
+                
+                -- 分源预测法参数（独立接口使用）
+                tunneling_speed FLOAT COMMENT '掘进速度（m/min）',
+                roadway_length FLOAT COMMENT '巷道长度（m）',
+                initial_gas_emission_strength FLOAT COMMENT '初始瓦斯涌出强度',
+                roadway_cross_section FLOAT COMMENT '巷道断面积（m²）',
+                coal_density FLOAT COMMENT '煤密度（t/m³）',
+                original_gas_content FLOAT COMMENT '原始瓦斯含量（m³/t）',
+                residual_gas_content FLOAT COMMENT '残余瓦斯含量（m³/t）',
+                
+                -- 预测目标（q、S值）
+                drilling_cuttings_s FLOAT COMMENT '钻屑量S（kg/m）',
+                gas_emission_velocity_q FLOAT COMMENT '瓦斯涌出速度q（L/min·m）',
+                
+                -- 历史趋势特征
+                gas_emission_q_historical_mean FLOAT COMMENT '历史瓦斯涌出量均值',
+                drilling_cuttings_s_historical_mean FLOAT COMMENT '历史钻屑量均值',
+                gas_emission_velocity_q_historical_mean FLOAT COMMENT '历史瓦斯涌出速度均值',
+                
+                -- 时空标识
+                coord_hash VARCHAR(100) COMMENT '坐标哈希值',
+                spatiotemporal_group VARCHAR(100) COMMENT '时空分组标识',
+                
+                create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',                
+                INDEX idx_working_face (working_face),
+                INDEX idx_measurement_date (measurement_date),
+                INDEX idx_coord_hash (coord_hash),
+                INDEX idx_spatiotemporal (working_face, measurement_date, x_coord, y_coord),
+                INDEX idx_distance_to_face (distance_to_face)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='瓦斯预测参数表（时空增强）';
+            """)
                 conn.execute(create_pred_sql)
                 logger.debug("表 t_prediction_parameters 初始化完成（已存在则跳过）")
 
@@ -367,9 +391,7 @@ class DBUtils:
             'coal_density', 'original_gas_content', 'residual_gas_content',
             'gas_emission_q', 'drilling_cuttings_s', 'gas_emission_velocity_q',
             'gas_emission_wall', 'gas_emission_fallen',
-            'total_gas_emission',
-            # 简化版时间相关字段
-            'measurement_date', 'depth_from_face'
+            'total_gas_emission'
         ]
         db_valid_cols = db_core_cols + list(self.dynamic_columns.keys())
         # 过滤df中存在的有效列

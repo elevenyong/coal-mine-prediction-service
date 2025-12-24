@@ -9,6 +9,7 @@ import pandas as pd
 from filelock import FileLock
 from loguru import logger
 import configparser
+
 # 导入各功能模块
 from config_utils import ConfigUtils
 from fault_calculator import FaultCalculator
@@ -19,6 +20,8 @@ from model_evaluator import ModelEvaluator
 from model_predictor import ModelPredictor
 from model_manager import ModelManager
 from db_utils import DBUtils
+
+
 class CoalMineRiskModel:
     """
     煤矿瓦斯风险预测模型（LightGBM多目标回归）
@@ -42,6 +45,7 @@ class CoalMineRiskModel:
         self.config = configparser.ConfigParser()
         self.config.read(config_path, encoding="utf-8")
         logger.info(f"成功加载配置文件：{config_path}")
+
         # Step 2: 初始化各功能模块
         self.config_utils = ConfigUtils(config_path)
         self.fault_calculator = fault_calculator or FaultCalculator(config_path)
@@ -51,12 +55,15 @@ class CoalMineRiskModel:
         self.model_trainer.config_filename = os.path.basename(config_path)
         self.model_evaluator = model_evaluator or ModelEvaluator(config_path)
         self.model_predictor = model_predictor or ModelPredictor()
+
         # Step 3: 初始化模型管理器
         self.model_dir = self.config_utils._get_config_value("Model", "model_dir", "models")
         self.model_manager = model_manager or ModelManager(self.model_dir)
+
         # Step 4: 加载训练核心参数
         self.full_train_threshold = self.config_utils._get_config_value("Model", "full_train_threshold", 6, is_int=True)
         self.min_train_samples = self.config_utils._get_config_value("Model", "min_train_samples", 6, is_int=True)
+
         # Step 5: 模型核心状态初始化
         self.models = {}
         self.preprocessor = None
@@ -67,10 +74,15 @@ class CoalMineRiskModel:
         self.training_stats = []
         self.baseline_rmse = None
         self._fitted_feature_order = None
+
+        # 注意：不再包含瓦斯涌出量相关状态
+        self.note = "模型已重构，瓦斯涌出量请使用独立的/calculate_gas_emission_source接口计算"
+
         # Step 6: 初始化数据库工具与跨进程锁
         self.db = DBUtils(config_path=config_path)
         self.file_lock = FileLock(self.model_manager.lock_file_path)
         logger.info(f"跨进程锁初始化完成，锁文件路径：{self.model_manager.lock_file_path}")
+
         # Step 7: 加载已有模型与同步数据库样本数
         self._load_model()
         try:
@@ -78,13 +90,10 @@ class CoalMineRiskModel:
         except Exception as e:
             self.total_samples = 0
             logger.warning(f"同步数据库样本数失败：{str(e)}，初始化为0")
+
         # Step 8: 控制台输出初始化结果
         self._print_header("模型初始化完成")
         self.current_config = config_path  # 记录当前使用的配置文件
-        # ============ 20251218 新增：进尺特征状态初始化 ============
-        self.mining_advance_enabled = getattr(self.data_preprocessor, 'enable_cumulative_advance', False)
-        logger.info(f"进尺特征状态：{'已启用' if self.mining_advance_enabled else '已禁用'}")
-        # ============ 新增结束 ============
         logger.info(f"当前配置文件：{self.current_config}")
         # 添加缺失的属性初始化
         self.fixed_evaluation_set = None  # 固定评估数据集
@@ -101,10 +110,6 @@ class CoalMineRiskModel:
             print(f"├─ 使用算法：{algorithm}")
             print(f"└─ 模型状态：{'已训练' if self.is_trained else '未训练'}")
             print("=" * 60)
-            # ============ 20251218新增：输出进尺特征状态 ============
-            if hasattr(self.data_preprocessor, 'enable_cumulative_advance'):
-                print(f"├─ 进尺特征：{'已启用' if self.data_preprocessor.enable_cumulative_advance else '已禁用'}")
-            # ============ 新增结束 ============
 
     def reload_config(self, new_config_path=None, reload_database=False):
         """
@@ -117,6 +122,7 @@ class CoalMineRiskModel:
         """
         try:
             logger.info("开始动态重载系统配置")
+
             # Step 1: 备份关键状态
             current_models = self.models.copy() if self.models else {}
             current_total_samples = self.total_samples
@@ -136,20 +142,14 @@ class CoalMineRiskModel:
                 'model_manager': self.model_manager,
                 'db': self.db
             }
-            # ============ 20251218新增：重载进尺配置 ============
-            # 重新初始化数据预处理器（会重新加载进尺配置）
-            self.data_preprocessor = DataPreprocessor(self.config_path)
-
-            # 更新进尺特征状态
-            self.mining_advance_enabled = getattr(self.data_preprocessor, 'enable_cumulative_advance', False)
-            logger.info(f"进尺特征配置重载：{'已启用' if self.mining_advance_enabled else '已禁用'}")
-            # ============ 20251218新增结束 ============
             # Step 2: 更新配置文件路径（如果提供了新路径）
             if new_config_path:
                 self.config_path = new_config_path
                 logger.info(f"切换到新配置文件: {new_config_path}")
+
             # Step 3: 重新读取配置
             merged_config = configparser.ConfigParser()
+
             # 首先读取基础配置 config.ini
             merged_config.read("config.ini", encoding="utf-8")
             logger.debug("基础配置文件 config.ini 已加载")
@@ -161,11 +161,14 @@ class CoalMineRiskModel:
                     logger.debug(f"阶段配置文件 {self.config_path} 已加载并合并")
                 else:
                     logger.warning(f"阶段配置文件 {self.config_path} 读取失败，仅使用基础配置")
+
             # 更新当前配置对象
             self.config = merged_config
             logger.debug("配置文件合并完成")
+
             # Step 4: 重新初始化配置工具和各模块,使用合并后的配置对象来初始化各模块
             self.config_utils = ConfigUtils(self.config_path)
+
             # 重新初始化各功能模块
             self.fault_calculator = FaultCalculator(self.config_path)
             self.regional_calculator = RegionalMeasureCalculator(self.config_path)
@@ -173,6 +176,7 @@ class CoalMineRiskModel:
             self.model_trainer = ModelTrainer(self.config)
             self.model_evaluator = ModelEvaluator(self.config_path)
             self.model_manager = ModelManager(self.model_dir)
+
             # Step 5: 条件性重载数据库配置
             if reload_database:
                 logger.info("重载数据库配置（将重建数据库连接）")
@@ -182,8 +186,10 @@ class CoalMineRiskModel:
             else:
                 logger.info("跳过数据库配置重载（使用现有连接）")
             # Step 6: 重新加载模型核心参数
-            self.full_train_threshold = self.config_utils._get_config_value("Model", "full_train_threshold", 6,is_int=True)
-            self.min_train_samples = self.config_utils._get_config_value("Model", "min_train_samples", 6,is_int=True)
+            self.full_train_threshold = self.config_utils._get_config_value("Model", "full_train_threshold", 6,
+                                                                            is_int=True)
+            self.min_train_samples = self.config_utils._get_config_value("Model", "min_train_samples", 6,
+                                                                         is_int=True)
             # Step 7: 恢复关键状态
             self.models = current_models
             self.total_samples = current_total_samples
@@ -194,6 +200,7 @@ class CoalMineRiskModel:
             self.preprocessor = current_preprocessor
             self.training_features = current_training_features
             self._fitted_feature_order = current_fitted_feature_order
+
             # Step 8: 同步预处理器状态
             if hasattr(self.data_preprocessor, 'is_trained'):
                 self.data_preprocessor.is_trained = current_is_trained
@@ -203,6 +210,7 @@ class CoalMineRiskModel:
                 self.model_trainer.config_filename = os.path.basename(self.config_path)
             logger.info("配置动态重载完成，所有模块已更新")
             self._print_result("配置动态重载成功")
+
             # 输出新的关键参数值
             if self.config.getboolean("Logging", "verbose_console", fallback=True):
                 print(f"├─ 新的全量训练阈值: {self.full_train_threshold}")
@@ -213,7 +221,10 @@ class CoalMineRiskModel:
                     print(f"└─ 数据库配置已重载")
                 else:
                     print(f"└─ 数据库配置未重载（使用现有连接）")
+
             return True
+
+
         except Exception as e:
             logger.error(f"配置动态重载失败，正在恢复状态：{str(e)}", exc_info=True)
             # 恢复模块状态
@@ -226,6 +237,7 @@ class CoalMineRiskModel:
             self.db = current_modules['db']
             self._print_result(f"配置重载失败：{str(e)}")
             return False
+
     def _print_header(self, title):
         """委托给config_utils"""
         self.config_utils._print_header(title)
@@ -248,8 +260,10 @@ class CoalMineRiskModel:
                 logger.warning("目标特征列表为空，无法加载模型")
                 self.is_trained = False
                 return
+
             (self.preprocessor, self.training_features,
              self.models, self.is_trained) = self.model_manager.load_model(target_features)
+
             if self.is_trained:
                 self.data_preprocessor.is_trained = True
                 self.data_preprocessor.training_features = self.training_features
@@ -293,9 +307,12 @@ class CoalMineRiskModel:
         training_details = self.model_trainer.get_last_training_diagnostics()
         if not training_details:
             return
+
         target_performance = training_details.get('target_performance', {})
         suggestions = training_details.get('parameter_suggestions', [])
+
         self._print_header("模型训练诊断结果")
+
         # 打印各目标性能
         for target, perf in target_performance.items():
             status = "✅ 良好"
@@ -303,58 +320,20 @@ class CoalMineRiskModel:
                 status = "⚠️ 过拟合"
             elif perf.get('is_underfitting', False):
                 status = "📉 欠拟合"
+
             validation_note = "(验证集)" if perf.get('use_validation', False) else "(训练集)"
             self._print_step(
                 f"{target}: 训练RMSE={perf['train_rmse']}, "
                 f"{validation_note}RMSE={perf['val_rmse']}, "
                 f"过拟合比率={perf['overfitting_ratio']} {status}"
             )
+
         # 打印参数建议
         if suggestions:
             self._print_header("参数调整建议")
             for suggestion in suggestions:
                 self._print_step(suggestion)
 
-    # ============ 20251218新增：进尺特征辅助方法 ============
-    def _validate_and_log_mining_features(self, df):
-        """
-        验证和记录进尺特征信息
-        :param df: 预处理后的DataFrame
-        """
-        try:
-            # 检查进尺特征是否存在
-            required_features = ['cumulative_advance', 'effective_exposure_distance']
-            missing_features = [f for f in required_features if f not in df.columns]
-            if missing_features:
-                logger.warning(f"进尺特征缺失：{missing_features}")
-            else:
-                # 记录进尺特征统计
-                cum_stats = {
-                    'min': df['cumulative_advance'].min(),
-                    'max': df['cumulative_advance'].max(),
-                    'mean': df['cumulative_advance'].mean()
-                }
-                exp_stats = {
-                    'min': df['effective_exposure_distance'].min(),
-                    'max': df['effective_exposure_distance'].max(),
-                    'mean': df['effective_exposure_distance'].mean()
-                }
-                logger.info(
-                    f"进尺特征统计：累计进尺[{cum_stats['min']:.1f}~{cum_stats['max']:.1f}], "
-                    f"均值={cum_stats['mean']:.1f}; "
-                    f"有效暴露距离[{exp_stats['min']:.1f}~{exp_stats['max']:.1f}], "
-                    f"均值={exp_stats['mean']:.1f}"
-                )
-                # 控制台输出
-                if self.config.getboolean("Logging", "verbose_console", fallback=True):
-                    print("├─ 进尺特征统计：")
-                    print(
-                        f"│  ├─ 累计进尺：{cum_stats['min']:.1f}~{cum_stats['max']:.1f}米，均值={cum_stats['mean']:.1f}米")
-                    print(
-                        f"│  ├─ 有效暴露距离：{exp_stats['min']:.1f}~{exp_stats['max']:.1f}米，均值={exp_stats['mean']:.1f}米")
-        except Exception as e:
-            logger.warning(f"进尺特征验证失败：{str(e)}")
-    # ============ 20251218新增结束 ============
     def train(self, data, epochs=1):
         """
         公开方法：模型训练接口
@@ -367,33 +346,23 @@ class CoalMineRiskModel:
             db_trans = None
             custom_create_time = None
             saved_count = 0
+
             try:
-                # Step 1: 数据预处理
-                df = self._preprocess_data(data, is_training=True)
-                # ============ 20251218 新增：时空特征验证与记录 ============
-                if hasattr(self.data_preprocessor, 'spatiotemporal_extractor') and \
-                        self.data_preprocessor.spatiotemporal_extractor:
-                    # 获取新增的时空特征信息
-                    new_features = self.data_preprocessor.spatiotemporal_extractor.get_new_feature_names()
-                    if new_features:
-                        logger.info(f"本次训练使用了 {len(new_features)} 个时空特征")
+                # Step 1: 数据预处理 - 添加详细日志和错误处理
+                logger.info(f"开始数据预处理，输入数据样本数: {len(data) if isinstance(data, list) else 'unknown'}")
 
-                        # 按类别统计
-                        categories = self.data_preprocessor.spatiotemporal_extractor.get_all_new_feature_categories()
-                        for category, features in categories.items():
-                            if features:
-                                logger.debug(f"  {category}: {len(features)}个特征")
+                try:
+                    df = self._preprocess_data(data, is_training=True)
+                    logger.info(f"数据预处理完成，DataFrame形状: {df.shape}")
+                except Exception as e:
+                    logger.error(f"数据预处理失败: {str(e)}", exc_info=True)
+                    raise ValueError(f"数据预处理失败: {str(e)}")
 
-                        # 控制台输出
-                        if self.config.getboolean("Logging", "verbose_console", fallback=True):
-                            print(f"├─ 时空特征使用情况：")
-                            for category, features in categories.items():
-                                if features:
-                                    print(f"│  ├─ {category}: {len(features)}个")
-                # ============ 20251218 新增结束：时空特征验证与记录 ============
-                if self.mining_advance_enabled:
-                    self._validate_and_log_mining_features(df)
-                # ============ 20251218新增结束 ============
+                # 检查关键列是否存在
+                logger.info(f"DataFrame列名: {list(df.columns)}")
+                logger.info(f"训练特征: {self.training_features}")
+                logger.info(f"目标特征: {self.data_preprocessor.target_features}")
+
                 if len(df) < self.min_train_samples:
                     msg = f"样本数 {len(df)} < 最小训练样本数 {self.min_train_samples}，跳过训练"
                     logger.warning(msg)
@@ -403,11 +372,33 @@ class CoalMineRiskModel:
                         "message": msg,
                         "training_stats": {"processed_samples": len(df), "training_performed": False}
                     }
+
+                # 检查训练特征和目标特征是否存在
+                missing_features = []
+                if self.training_features:
+                    missing_features = [f for f in self.training_features if f not in df.columns]
+
+                if missing_features:
+                    logger.error(f"训练数据缺少特征: {missing_features}")
+                    logger.error(f"可用特征: {list(df.columns)}")
+                    raise ValueError(f"训练数据缺少特征: {missing_features}")
+
+                missing_targets = []
+                if self.data_preprocessor.target_features:
+                    missing_targets = [t for t in self.data_preprocessor.target_features if t not in df.columns]
+
+                if missing_targets:
+                    logger.error(f"训练数据缺少目标特征: {missing_targets}")
+                    raise ValueError(f"训练数据缺少目标特征: {missing_targets}")
+
+                # 继续原有流程...
                 # ============ 新增：自动配置切换逻辑 ============
                 # 判断是否初次训练（模型未训练且数据库样本数为0）
                 is_initial_training = not self.is_trained and initial_samples == 0
+
                 # 判断数据量大小（使用全量训练阈值作为判断标准）
                 is_large_data = len(df) >= self.full_train_threshold
+
                 # 自动配置切换决策
                 if is_initial_training and is_large_data:
                     # 初次大量数据训练 → 使用 phase1 配置
@@ -421,6 +412,7 @@ class CoalMineRiskModel:
                     # 其他情况保持当前配置
                     target_config = None
                     reason = "保持当前配置"
+
                 # 执行配置切换（如果需要）
                 if target_config and getattr(self, 'current_config', None) != target_config:
                     logger.info(f"自动配置切换：{reason} → {target_config}")
@@ -437,10 +429,12 @@ class CoalMineRiskModel:
                 else:
                     logger.debug(f"无需切换配置：{reason}")
                 # ============ 自动配置切换逻辑结束 ============
+
                 # Step 2: 开启数据库事务
                 db_conn = self.db._get_connection()
                 db_trans = db_conn.begin()
                 logger.info("数据库事务已开启，准备保存训练数据")
+
                 # Step 3: 保存数据到数据库
                 custom_create_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
                 saved_count = self.db.save_training_data(
@@ -454,26 +448,26 @@ class CoalMineRiskModel:
                 logger.info(f"事务中插入 {saved_count} 条训练数据（未提交）")
 
                 # Step 4: 构建训练集
-                if not self.training_features:
-                    raise ValueError("训练特征列表为空，请检查数据预处理")
                 X = df[self.training_features]
                 y = df[self.data_preprocessor.target_features].values
                 self._fitted_feature_order = X.columns.tolist()
-                # 记录特征信息
-                logger.info(
-                    f"训练特征数量: {len(self.training_features)}，包含时空特征: {any('neighbor_' in f or 'decay' in f for f in self.training_features)}")
+
+                logger.info(f"构建训练集: X形状={X.shape}, y形状={y.shape}")
+
                 # Step 5: 特征预处理
                 self.preprocessor, X_proc, _ = self.model_trainer.create_preprocessor(X, self.data_preprocessor.base_categorical)
 
                 # Step 6: 判断训练模式
                 current_total = initial_samples + len(df)
                 threshold_hit = (current_total % self.full_train_threshold == 0)
+
                 # 传递数据量信息的性能检查
                 perf_trigger = self.model_evaluator._performance_trigger_check(
                     self.eval_history,
                     self.baseline_rmse,
                     len(df)  # 传递当前训练数据量
                 )
+
                 if perf_trigger:
                     do_full_train = True
                     reason = "性能下降触发"
@@ -487,23 +481,27 @@ class CoalMineRiskModel:
                     do_full_train = False
                     reason = "增量训练"
                 self._print_step(f"训练模式判断：{reason}")
+
                 # Step 7: 执行训练
                 if do_full_train:
                     self.models = self.model_trainer._full_train(X_proc, y, self.data_preprocessor.target_features)
                 else:
                     self.models = self.model_trainer._incremental_train(X_proc, y, self.data_preprocessor.target_features, self.models)
+
                 # Step 8: 提交事务+更新状态
                 db_trans.commit()
                 logger.info(f"事务提交成功，{saved_count} 条数据已持久化")
                 self.total_samples = self.model_manager.get_total_samples_from_db(self.db)
                 new_samples = self.total_samples - initial_samples
                 self._print_step(f"样本数更新：新增 {new_samples} 条，累计 {self.total_samples} 条")
+
                 # Step 9: 保存模型+标记训练状态
                 self.model_manager.save_model(self.models, self.preprocessor, self.training_features, self.data_preprocessor.target_features)
                 self.is_trained = True
                 # 同步状态到预处理器
                 self.data_preprocessor.is_trained = True
                 self.data_preprocessor.training_features = self.training_features
+
                 # Step 10: 训练后评估（小数据特殊处理）
                 if len(df) <= 5:
                     # 极少量数据：跳过评估，避免不准确的RMSE影响基线
@@ -535,12 +533,15 @@ class CoalMineRiskModel:
                         agg_rmse is not None and  # 修正：使用 agg_rmse
                         self.baseline_rmse is not None and
                         len(df) > 10):  # 只有数据量>10时才检查性能下降
+
                     drop_ratio = (agg_rmse - self.baseline_rmse) / self.baseline_rmse  # 修正：使用正确的变量
+
                     # 添加详细的性能诊断日志
                     logger.info(f"=== 性能检查诊断 ===")
                     logger.info(f"训练数据: {len(df)}条, 当前RMSE: {agg_rmse:.4f}")  # 修正：使用 agg_rmse
                     logger.info(f"基线RMSE: {self.baseline_rmse:.4f}, 下降比例: {drop_ratio:.2%}")
                     logger.info(f"阈值: {self.model_evaluator.perf_drop_ratio * 2:.2%}")
+
                     if drop_ratio > self.model_evaluator.perf_drop_ratio * 2:
                         logger.warning(f"性能下降过多（{drop_ratio:.2%}），尝试回滚")
                         rollback_res = self.rollback_model(backup_index=-2)
@@ -562,10 +563,12 @@ class CoalMineRiskModel:
                     if len(df) <= 10:
                         skip_reason.append("小数据训练")
                     logger.info(f"跳过性能回滚检查: {', '.join(skip_reason)}")
+
                 # Step 13: 如果是大数据量初始训练，设置固定评估集
                 if len(df) >= 100 and not hasattr(self, 'fixed_evaluation_set'):
                     logger.info("大数据量训练，设置固定评估集")
                     self.set_fixed_evaluation_set(df, size=50)
+
                 # Step 12: 记录训练历史到数据库
                 train_duration = (datetime.now() - train_start).total_seconds()
                 # 监控调用
@@ -586,6 +589,7 @@ class CoalMineRiskModel:
                     "train_time": datetime.now()
                 }
                 record_id = self.db.insert_training_record(training_record)
+
                 # 构建返回结果
                 training_result = {
                     "status": "success",
@@ -598,18 +602,7 @@ class CoalMineRiskModel:
                         "training_mode": reason,
                         "evaluation_rmse": agg_rmse,
                         "training_duration": round(train_duration, 2),
-                        "record_id": record_id,
-                        "mining_features_enabled": self.mining_advance_enabled,
-                        "mining_features_calculated": 'cumulative_advance' in df.columns,
-                        "mining_samples_count": df[
-                        'daily_advance'].notnull().sum() if 'daily_advance' in df.columns else 0,
-                        # ============ 20251218新增时空特征统计 ============
-                        "spatiotemporal_features_enabled": hasattr(self.data_preprocessor,
-                                                                   'spatiotemporal_extractor') and \
-                                                           self.data_preprocessor.spatiotemporal_extractor is not None,
-                        "spatiotemporal_feature_count": len(new_features) if 'new_features' in locals() else 0,
-                        "feature_categories": categories if 'categories' in locals() else {}
-                        # ============ 20251218新增结束 ============
+                        "record_id": record_id
                     },
                     "evaluation_details": eval_result if eval_result.get("status") == "success" else None
                 }
@@ -619,7 +612,9 @@ class CoalMineRiskModel:
                 if training_result.get("status") == "success":
                     # 输出训练诊断信息
                     self._print_training_diagnosis()
+
                 return training_result
+
             except Exception as e:
                 # 训练失败 → 回滚事务
                 logger.error(f"训练失败，触发回滚：{str(e)}", exc_info=True)
@@ -663,6 +658,7 @@ class CoalMineRiskModel:
     def evaluate_model(self, eval_size=200, eval_df=None, use_fixed_set=False):
         """
         增强的模型评估方法，支持固定评估集
+
         :param eval_size: 评估样本数
         :param eval_df: 外部评估数据
         :param use_fixed_set: 是否使用固定评估集
@@ -671,33 +667,59 @@ class CoalMineRiskModel:
         if use_fixed_set and hasattr(self, 'fixed_evaluation_set') and self.fixed_evaluation_set is not None:
             logger.info("使用固定评估集进行评估")
             eval_df = self.fixed_evaluation_set
+
         return self.model_evaluator.evaluate_model(
             self.models, self.preprocessor, self.training_features, self.data_preprocessor.target_features,
             self._fitted_feature_order, self.db, eval_size, eval_df
         )
 
     def predict(self, data):
-        """
-        模型预测（委托给ModelPredictor）
-        新增：添加进尺特征状态
-        """
-        # 使用ModelPredictor进行预测
-        result = self.model_predictor.predict(
+        """模型预测（委托给ModelPredictor）"""
+        return self.model_predictor.predict(
             data, self.models, self.preprocessor, self.training_features,
             self.data_preprocessor.target_features, self._fitted_feature_order, self.is_trained,
             self.file_lock, self.data_preprocessor, self.fault_calculator, self.db
         )
 
-        # ============ 新增：添加进尺特征状态 ============
-        if hasattr(self, 'mining_advance_enabled'):
-            # 在结果中添加进尺特征状态
-            if 'success' in result and result['success']:
-                result['mining_features'] = {
-                    'enabled': self.mining_advance_enabled,
-                    'message': '进尺特征已启用' if self.mining_advance_enabled else '进尺特征未启用'
-                }
-        # ============ 新增结束 ============
-        return result
+    def retrain_from_db(self, workface_id=None, limit=None):
+        """从数据库重新训练模型（向后兼容）"""
+        self._print_header("从数据库重新训练模型")
+
+        # 记录向后兼容的警告
+        logger.warning("retrain_from_db方法已过时，请使用retrain_from_db_full方法")
+
+        try:
+            # 从数据库读取历史数据
+            df = self.model_manager.get_recent_data_from_db(self.db, limit=limit)
+            if df.empty:
+                msg = "未从数据库读取到任何数据，无法重新训练"
+                logger.warning(msg)
+                self._print_result(msg)
+                return {"status": "warning", "message": msg}
+
+            # 筛选特定工作面数据
+            if workface_id is not None and 'workface_id' in df.columns:
+                df = df[df["workface_id"] == workface_id].reset_index(drop=True)
+                self._print_step(f"筛选工作面ID={workface_id}，剩余样本数：{len(df)}")
+                if df.empty:
+                    msg = f"工作面ID={workface_id} 无数据"
+                    logger.warning(msg)
+                    return {"status": "warning", "message": msg}
+
+            # 重新计算断层系数
+            logger.info("重新训练：自动计算断层影响系数")
+            df = self.calculate_fault_influence_strength(df)
+
+            # 执行训练（使用新的全量重新训练方法）
+            result = self.retrain_from_db_full(
+                workface_id=workface_id,
+                sample_limit=limit,
+                force_full_train=True
+            )
+            return result
+        except Exception as e:
+            logger.error(f"重新训练失败：{str(e)}", exc_info=True)
+            return {"status": "error", "message": str(e)}
 
     def rollback_model(self, backup_index=-1):
         """模型回滚（委托给ModelManager）"""
@@ -709,6 +731,7 @@ class CoalMineRiskModel:
             self.data_preprocessor.is_trained = self.is_trained
             self.data_preprocessor.training_features = self.training_features
         return result
+
     def get_model_status(self):
         """获取模型当前状态"""
         backup_count = 0
@@ -718,7 +741,9 @@ class CoalMineRiskModel:
                 backup_count = len(os.listdir(backup_root))
             except Exception:
                 backup_count = 0
+
         latest_eval = self.eval_history[-1] if self.eval_history else None
+
         return {
             "is_trained": self.is_trained,
             "total_samples": self.total_samples,
@@ -729,6 +754,19 @@ class CoalMineRiskModel:
             "last_train_time": self.training_stats[-1]["timestamp"] if self.training_stats else None
         }
 
+    def _save_training_stats(self, train_mode, sample_count, agg_rmse):
+        """保存训练统计到内存"""
+        if not hasattr(self, 'training_stats'):
+            self.training_stats = []
+        self.training_stats.append({
+            "timestamp": datetime.now(),
+            "train_mode": train_mode,
+            "sample_count": sample_count,
+            "total_samples": self.total_samples,
+            "agg_rmse": agg_rmse
+        })
+        self.training_stats = self.training_stats[-100:]
+        logger.debug(f"训练统计更新，累计 {len(self.training_stats)} 条记录")
 
     def create_fixed_evaluation_set(self, data, size=50):
         """
@@ -744,10 +782,12 @@ class CoalMineRiskModel:
                 df = pd.DataFrame(data)
             else:
                 df = data.copy()
+
             # 确保数据量足够
             if len(df) < size:
                 logger.warning(f"数据量不足({len(df)}条)，无法创建{size}条的固定评估集")
                 return df
+
             # 按工作面分层采样，确保评估集代表性
             fixed_eval_set = []
             if 'workface_id' in df.columns:
@@ -757,6 +797,7 @@ class CoalMineRiskModel:
                     if len(group) >= group_size:
                         sampled = group.sample(n=group_size, random_state=42)
                         fixed_eval_set.append(sampled)
+
                 if fixed_eval_set:
                     fixed_eval_df = pd.concat(fixed_eval_set, ignore_index=True)
                     # 如果总数超过size，随机采样调整
@@ -795,13 +836,12 @@ class CoalMineRiskModel:
         with self.file_lock:
             self._print_header("全量重新训练模型（从数据库恢复）")
             retrain_start = datetime.now()
+
             try:
                 # Step 1: 从数据库读取历史数据（使用模型管理器）
                 logger.info(f"从数据库读取历史数据：工作面对{workface_id}，样本限制{sample_limit}")
                 df = self.model_manager.get_recent_data_from_db(self.db, limit=sample_limit)
-                if 'measurement_date' in df.columns and pd.api.types.is_datetime64_any_dtype(df['measurement_date']):
-                    df['measurement_date'] = df['measurement_date'].astype('int64') // 10 ** 9  # 转为 Unix 时间戳
-                    logger.info("数据库读取的 measurement_date 已转换为 Unix 时间戳")
+
                 if df.empty:
                     msg = "未从数据库读取到任何数据，无法重新训练"
                     logger.warning(msg)
@@ -811,6 +851,7 @@ class CoalMineRiskModel:
                         "message": msg,
                         "training_stats": {"processed_samples": 0, "training_performed": False}
                     }
+
                 # Step 2: 筛选特定工作面数据
                 if workface_id is not None and 'workface_id' in df.columns:
                     original_count = len(df)
@@ -820,6 +861,7 @@ class CoalMineRiskModel:
                         logger.warning(msg)
                         return {"status": "warning", "message": msg}
                     logger.info(f"筛选工作面ID={workface_id}，样本数：{original_count} → {len(df)}")
+
                 # Step 3: 数据预处理（重新计算断层影响系数）
                 logger.info("全量重新训练：自动计算断层影响系数")
                 try:
@@ -827,6 +869,7 @@ class CoalMineRiskModel:
                 except Exception as e:
                     logger.error(f"计算断层影响系数失败：{str(e)}，使用现有值")
                     # 即使失败也继续，使用现有值
+
                 # Step 4: 数据预处理（训练模式）
                 try:
                     df_processed, training_features = self.data_preprocessor.preprocess_data(
@@ -835,6 +878,7 @@ class CoalMineRiskModel:
                 except Exception as e:
                     logger.error(f"数据预处理失败：{str(e)}")
                     raise ValueError(f"数据预处理失败：{str(e)}")
+
                 # Step 5: 检查最小样本数
                 if len(df_processed) < self.min_train_samples:
                     msg = f"样本数 {len(df_processed)} < 最小训练样本数 {self.min_train_samples}，无法重新训练"
@@ -845,6 +889,7 @@ class CoalMineRiskModel:
                         "message": msg,
                         "training_stats": {"processed_samples": len(df_processed), "training_performed": False}
                     }
+
                 # Step 6: 强制配置为全量训练模式
                 logger.info("强制使用全量训练配置")
                 # 切换到全量训练配置（phase1）
@@ -852,18 +897,22 @@ class CoalMineRiskModel:
                 if self.current_config != "config_phase1.ini":
                     logger.info(f"切换到全量训练配置：{config_before} → config_phase1.ini")
                     self.reload_config("config_phase1.ini", reload_database=False)
+
                 # Step 7: 构建训练集
                 X = df_processed[training_features]
                 y = df_processed[self.data_preprocessor.target_features].values
                 fitted_feature_order = X.columns.tolist()
+
                 # Step 8: 特征预处理
                 preprocessor, X_proc, _ = self.model_trainer.create_preprocessor(
                     X, self.data_preprocessor.base_categorical
                 )
+
                 # Step 9: 执行全量训练（强制使用全量训练逻辑）
                 logger.info(
                     f"开始全量训练，样本数：{len(df_processed)}，目标数：{len(self.data_preprocessor.target_features)}")
                 models = self.model_trainer._full_train(X_proc, y, self.data_preprocessor.target_features)
+
                 # Step 10: 更新模型状态
                 self.models = models
                 self.preprocessor = preprocessor
@@ -877,6 +926,7 @@ class CoalMineRiskModel:
                 logger.info("保存重新训练的模型")
                 self.model_manager.save_model(self.models, self.preprocessor, self.training_features,
                                               self.data_preprocessor.target_features)
+
                 # Step 12: 模型评估
                 eval_result = None
                 if len(df_processed) > 5:  # 避免小数据评估不准确
@@ -886,12 +936,15 @@ class CoalMineRiskModel:
                             f"重新训练后评估结果：状态={eval_result.get('status')}, RMSE={eval_result.get('avg_rmse')}")
                     except Exception as e:
                         logger.warning(f"重新训练后评估失败：{str(e)}")
+
                 # Step 13: 恢复原配置（如果需要）
                 if config_before != "config_phase1.ini":
                     logger.info(f"恢复原配置：config_phase1.ini → {config_before}")
                     self.reload_config(config_before, reload_database=False)
+
                 # Step 14: 计算训练耗时
                 train_duration = (datetime.now() - retrain_start).total_seconds()
+
                 # Step 15: 记录监控
                 from performance_monitor import global_monitor
                 global_monitor.record_training_session(
@@ -900,6 +953,7 @@ class CoalMineRiskModel:
                     duration=train_duration,
                     rmse=eval_result.get("avg_rmse") if eval_result else None
                 )
+
                 # Step 16: 记录训练历史
                 training_record = {
                     "sample_count": len(df_processed),
@@ -911,6 +965,7 @@ class CoalMineRiskModel:
                     "train_time": datetime.now()
                 }
                 record_id = self.db.insert_training_record(training_record)
+
                 # Step 17: 构建返回结果
                 training_result = {
                     "status": "success",
@@ -927,11 +982,14 @@ class CoalMineRiskModel:
                     "evaluation_details": eval_result if eval_result and eval_result.get(
                         "status") == "success" else None
                 }
+
                 # 输出训练诊断信息
                 if training_result.get("status") == "success":
                     self._print_training_diagnosis()
+
                 logger.info(f"全量重新训练成功完成，耗时：{train_duration:.2f}秒，样本数：{len(df_processed)}")
                 return training_result
+
             except Exception as e:
                 # 训练失败处理
                 train_duration = (datetime.now() - retrain_start).total_seconds()
@@ -945,6 +1003,7 @@ class CoalMineRiskModel:
                     duration=train_duration,
                     rmse=None
                 )
+
                 return {
                     "status": "error",
                     "message": str(e),

@@ -7,11 +7,15 @@
   4. 模型状态查询、重新训练、版本回滚
 依赖：Flask、loguru（日志）、项目核心模块
 """
+from datetime import datetime
+
 import pandas as pd
 from flask import Flask, request, jsonify
 import time
 import configparser
 from performance_monitor import global_monitor
+from source_prediction import SourcePredictionCalculator
+
 # 导入项目核心模块
 from setup_logging import setup_logging
 from db_utils import DBUtils
@@ -34,6 +38,8 @@ app = Flask(__name__)
 db_utils = DBUtils(config_path="config.ini")
 model = CoalMineRiskModel(config_path="config.ini")
 logger.info(f"Flask应用初始化完成，模型状态：{'已训练' if model.is_trained else '未训练'}")
+# 初始化分源预测计算器
+source_predictor = SourcePredictionCalculator(config_path="config.ini")
 
 # -------------------- 接口1：区域措施强度计算 --------------------
 @app.route("/api/model/calculate_regional_strength", methods=["POST"])
@@ -109,14 +115,22 @@ def calculate_regional_strength():
         }), 500
 
 # -------------------- 接口2：模型训练（全量/增量自动切换） --------------------
+# file: app.py (修改训练接口部分)
 @app.route("/api/model/train", methods=["POST"])
 def train_model():
     """
-    模型训练接口（支持全量/增量自动切换，事务控制确保数据一致性）
-    返回结果：训练状态、样本统计、模型评估详情
+    模型训练接口（增强时空数据处理）
     """
-    logger.info("接收到【模型训练】请求")
+    logger.info("接收到【模型训练】请求（时空增强版）")
     start_time = time.time()
+
+    # 在函数开头初始化所有变量，避免作用域问题
+    epochs = 1  # 默认值
+    data = None
+    data_with_fault = None
+    workface_groups = {}
+    dates_list = []
+    repeated_coords = {}
     try:
         # Step 1: 读取并校验请求数据
         request_data = request.get_json()
@@ -129,31 +143,6 @@ def train_model():
             }), 400
         # 校验样本格式（必须为列表）
         data = request_data["data"]
-        # 检查是否包含时间相关字段
-        temporal_fields = ['measurement_date', 'depth_from_face']
-        missing_temporal = []
-
-        for field in temporal_fields:
-            if not any(field in d for d in data):
-                missing_temporal.append(field)
-        if missing_temporal:
-            logger.warning(f"训练数据缺少时间相关字段: {missing_temporal}")
-            logger.info("时间特征处理可能需要使用默认值或估算值")
-
-            # 为缺失字段添加默认值
-            for d in data:
-                if 'measurement_date' in missing_temporal:
-                    from datetime import datetime
-                    current_date = datetime.now().strftime("%Y-%m-%d")
-                    d['measurement_date'] = d.get('measurement_date', current_date)
-
-                if 'depth_from_face' in missing_temporal:
-                    # 验证孔深度默认设为0（工作面位置）
-                    d['depth_from_face'] = d.get('depth_from_face', 0.0)
-
-            logger.info(f"为{len(data)}条样本添加默认时间特征值")
-        else:
-            logger.info("训练数据包含完整时间特征（测量日期+验证孔深度）")
         if not isinstance(data, list):
             logger.warning("'data'字段非列表类型")
             return jsonify({
@@ -170,29 +159,81 @@ def train_model():
                 "message": "'epochs'必须是大于等于1的整数",
                 "training_details": None
             }), 400
-
-        # ============ 20251218新增：进尺数据验证 ============
-        # 检查训练数据中是否包含进尺字段
-        if hasattr(model.data_preprocessor, 'enable_cumulative_advance') and \
-                model.data_preprocessor.enable_cumulative_advance:
-            samples_with_daily_advance = sum(1 for d in data if 'daily_advance' in d)
-            total_samples = len(data)
-            logger.info(f"进尺数据检查：{samples_with_daily_advance}/{total_samples}条样本包含日进尺数据")
-            if samples_with_daily_advance == 0:
-                logger.warning("训练数据中未找到daily_advance字段，将使用默认值")
-            elif samples_with_daily_advance < total_samples * 0.5:
-                logger.warning(
-                    f"只有{samples_with_daily_advance}/{total_samples}条样本有日进尺数据，可能影响进尺特征计算")
-        # ============ 20251218新增结束 ============
-        # Step 2: 自动计算断层影响系数（样本中缺失则补充）
+        # Step 2: 检查时空数据完整性
+        logger.info("检查时空数据完整性")
+        enhanced_data = []
+        for i, sample in enumerate(data):
+            # 确保有基本标识
+            if 'working_face' not in sample:
+                logger.warning(f"样本[{i}]缺少working_face字段，使用默认值")
+                sample['working_face'] = f"工作面_{i}"
+            # 确保有时间标识
+            if 'measurement_date' not in sample:
+                # 尝试从其他字段推断
+                if 'create_time' in sample:
+                    sample['measurement_date'] = sample['create_time'].split(' ')[0]
+                else:
+                    sample['measurement_date'] = datetime.now().strftime("%Y-%m-%d")
+                    logger.warning(f"样本[{i}]缺少measurement_date，使用当前日期")
+            # 确保有坐标信息
+            if 'x_coord' not in sample or 'y_coord' not in sample:
+                logger.warning(f"样本[{i}]缺少坐标信息，可能影响时空分析")
+            # 关键：确保有距采面距离
+            if 'distance_to_face' not in sample:
+                # 尝试计算或估算
+                if 'drilling_depth' in sample and 'face_advance_distance' in sample:
+                    sample['distance_to_face'] = sample['drilling_depth'] + sample.get('face_advance_distance', 0)
+                elif 'distance_from_entrance' in sample:
+                    # 简单估算
+                    sample['distance_to_face'] = sample['distance_from_entrance'] % 50  # 假设工作面周期为50米
+                    logger.warning(f"样本[{i}]估算distance_to_face: {sample['distance_to_face']}")
+                else:
+                    sample['distance_to_face'] = 0
+                    logger.warning(f"样本[{i}]无法确定distance_to_face，设为0")
+            enhanced_data.append(sample)
+        data = enhanced_data
+        # Step 3: 时空数据统计
+        logger.info("时空数据统计:")
+        all_dates = []
+        if data:
+            # 按工作面分组统计
+            for sample in data:
+                workface = sample.get('working_face', '未知')
+                if workface not in workface_groups:
+                    workface_groups[workface] = []
+                workface_groups[workface].append(sample)
+            for workface, samples in workface_groups.items():
+                workface_dates = sorted(
+                    set(s.get('measurement_date', '') for s in samples if s.get('measurement_date')))
+                if workface_dates:
+                    all_dates.extend(workface_dates)
+                logger.info(
+                    f"  工作面 '{workface}': {len(samples)}条记录，日期范围: {workface_dates[0] if workface_dates else '未知'} 到 {workface_dates[-1] if workface_dates else '未知'}")
+                # 检查同一坐标点的重复测量
+                coord_count = {}
+                for sample in samples:
+                    if all(k in sample for k in ['x_coord', 'y_coord', 'z_coord']):
+                        coord_key = f"{sample['x_coord']:.1f}_{sample['y_coord']:.1f}_{sample['z_coord']:.1f}"
+                        coord_count[coord_key] = coord_count.get(coord_key, 0) + 1
+                workface_repeated = {k: v for k, v in coord_count.items() if v > 1}
+                if workface_repeated:
+                    logger.info(f"    发现{len(workface_repeated)}个坐标点有重复测量")
+                    repeated_coords.update(workface_repeated)
+        dates_list = sorted(set(all_dates)) if all_dates else []
+        # Step 4: 自动计算断层影响系数
         logger.info(f"计算{len(data)}条样本的断层影响系数")
         data_with_fault = model.calculate_fault_influence_strength(data)
         logger.info(f"断层影响系数计算完成，有效样本数：{len(data_with_fault)}")
-        # Step 3: 调用模型训练（事务控制）
+        # 调试：检查断层计算后的数据
+        if data_with_fault and isinstance(data_with_fault, list):
+            logger.info(f"断层计算后数据示例（第一条）：{data_with_fault[0] if data_with_fault else '空'}")
+            logger.info(f"断层计算后数据字段：{list(data_with_fault[0].keys()) if data_with_fault else '空'}")
+        # Step 5: 调用模型训练（事务控制）
         initial_samples = model.total_samples
-        logger.info(f"训练前累计样本数：{initial_samples}，本次训练样本数：{len(data_with_fault)}")
+        logger.info(f"训练前累计样本数：{initial_samples}，本次训练样本数：{len(data_with_fault)}，epochs={epochs}")
+        # 调用模型训练
         train_result = model.train(data=data_with_fault, epochs=epochs)
-        # Step 4: 增强返回结果（补充训练前后对比）
+        # Step 6: 增强返回结果（补充训练前后对比）
         training_stats = train_result.get("training_stats", {})
         training_mode = training_stats.get("training_mode", "未知")
         enhanced_result = {
@@ -203,12 +244,17 @@ def train_model():
             "current_total_samples": model.total_samples,
             "evaluation_rmse": training_stats.get("evaluation_rmse"),
             "duration": round(time.time() - start_time, 2),
+            "spatiotemporal_info": {
+                "unique_workfaces": len(workface_groups),
+                "date_range": f"{dates_list[0] if dates_list else '未知'} 到 {dates_list[-1] if dates_list else '未知'}",
+                "repeated_coords_count": len(repeated_coords)
+            },
             "training_details": {
                 "initial_total_samples": initial_samples,
                 "current_total_samples": model.total_samples,
                 "new_samples_added": model.total_samples - initial_samples,
                 "training_mode": training_mode,
-                "epochs": epochs,
+                "epochs": epochs,  # 这里可以安全访问 epochs
                 "processed_samples": training_stats.get("processed_samples", 0),
                 "saved_to_db": training_stats.get("saved_to_db", 0),
                 "evaluation_rmse": training_stats.get("evaluation_rmse"),
@@ -216,7 +262,7 @@ def train_model():
             }
         }
         duration = time.time() - start_time
-        sample_count = len(data) if 'data' in locals() else 0
+        sample_count = len(data) if data else 0
         global_monitor.record_api_request(
             endpoint="train",
             method="POST",
@@ -225,7 +271,7 @@ def train_model():
             sample_count=sample_count
         )
         # 额外记录训练会话详情
-        if 'train_result' in locals() and train_result.get('status') == 'success':
+        if train_result.get('status') == 'success':
             training_stats = train_result.get('training_stats', {})
             global_monitor.record_training_session(
                 train_mode=training_stats.get('training_mode', 'unknown'),
@@ -236,29 +282,34 @@ def train_model():
         # 补充评估详情（若有）
         if "evaluation_details" in train_result:
             enhanced_result["evaluation_details"] = train_result["evaluation_details"]
-        logger.info(f"模型训练完成，状态：{train_result.get('status')}，模式：{training_mode}，新增样本：{enhanced_result['new_samples_added']}")
+        logger.info(
+            f"模型训练完成，状态：{train_result.get('status')}，模式：{training_mode}，新增样本：{enhanced_result['new_samples_added']}")
         return jsonify(enhanced_result)
     except Exception as e:
         # 捕获异常并返回错误详情
         duration = time.time() - start_time
+        sample_count = len(data) if data else 0
         global_monitor.record_api_request(
             endpoint="train",
             method="POST",
             duration=duration,
             status_code=500,
-            sample_count=0
+            sample_count=sample_count
         )
+        # 构建错误信息，避免引用可能不存在的变量
+        error_details = {
+            "input_samples": sample_count,
+            "error_phase": "training_process",
+            "data_rolled_back": True,
+            "epochs_attempted": epochs if 'epochs' in locals() else 'unknown'  # 安全地引用 epochs
+        }
         error_msg = f"模型训练接口处理失败：{str(e)}"
         logger.error(error_msg, exc_info=True)
         return jsonify({
             "status": "error",
             "message": error_msg,
             "duration": round(duration, 2),
-            "training_details": {
-                "input_samples": len(data) if "data" in locals() else 0,
-                "error_phase": "training_process",
-                "data_rolled_back": True
-            }
+            "training_details": error_details
         }), 500
 
 # -------------------- 接口3：瓦斯指标预测（分源/模型切换） --------------------
@@ -397,6 +448,7 @@ def get_model_status():
             "duration": round(duration, 2)
         }), 500
 
+
 # -------------------- 接口5：从数据库重新训练模型 --------------------
 @app.route("/api/model/retrain", methods=["POST"])
 def retrain_model():
@@ -413,6 +465,7 @@ def retrain_model():
     """
     logger.info("接收到【从数据库重新训练】请求（全量重新训练）")
     start_time = time.time()
+
     try:
         # Step 1: 读取请求参数（可选）
         data = request.get_json() or {}
@@ -434,14 +487,30 @@ def retrain_model():
         before_status = model.get_model_status()
         logger.info(
             f"重新训练前状态：累计样本 {before_status['total_samples']}，训练状态 {'已训练' if before_status['is_trained'] else '未训练'}")
+
         # Step 2: 调用模型从数据库重新训练（使用全量重新训练方法）
         retrain_result = model.retrain_from_db_full(
             workface_id=workface_id,
             sample_limit=sample_limit,
             force_full_train=force_full_train
         )
+
         # Step 3: 记录重新训练后的状态
         after_status = model.get_model_status()
+        # Step 3.5: 添加时空特征使用说明（新增）
+        if retrain_result.get("status") == "success":
+            # 检查重新训练使用的数据是否包含时间特征
+            training_stats = retrain_result.get("training_stats", {})
+            processed_samples = training_stats.get("processed_samples", 0)
+
+            # 记录时空特征使用情况
+            retrain_result["temporal_features_used"] = True
+            retrain_result["temporal_features_note"] = "重新训练使用了增强的时间特征（掘进天数、距工作面距离、采动影响系数）"
+
+            logger.info(f"重新训练使用时空特征，样本数：{processed_samples}")
+
+
+
         # Step 4: 构建增强的返回结果
         duration = round(time.time() - start_time, 2)
         enhanced_result = {
@@ -462,9 +531,11 @@ def retrain_model():
                 }
             }
         }
+
         # 补充评估详情（若有）
         if "evaluation_details" in retrain_result:
             enhanced_result["evaluation_details"] = retrain_result["evaluation_details"]
+
         # 记录监控
         global_monitor.record_api_request(
             endpoint="retrain",
@@ -473,13 +544,16 @@ def retrain_model():
             status_code=200,
             sample_count=retrain_result.get("training_stats", {}).get("processed_samples", 0)
         )
+
         logger.info(f"从数据库重新训练完成，状态：{retrain_result.get('status')}，耗时：{duration}秒")
         return jsonify(enhanced_result)
+
     except Exception as e:
         # 捕获异常并返回错误
         duration = round(time.time() - start_time, 2)
         error_msg = f"重新训练接口处理失败：{str(e)}"
         logger.error(error_msg, exc_info=True)
+
         global_monitor.record_api_request(
             endpoint="retrain",
             method="POST",
@@ -487,12 +561,14 @@ def retrain_model():
             status_code=500,
             sample_count=0
         )
+
         return jsonify({
             "success": False,
             "message": f"服务器错误：{error_msg}",
             "data": None,
             "duration": duration
         }), 500
+
 # -------------------- 接口6：模型回滚到指定备份 --------------------
 @app.route("/api/model/rollback", methods=["POST"])
 def rollback_model():
@@ -506,6 +582,7 @@ def rollback_model():
     """
     logger.info("接收到【模型回滚】请求")
     start_time = time.time()
+
     try:
         # Step 1: 读取请求参数（默认回滚到最新备份）
         data = request.get_json() or {}
@@ -534,6 +611,7 @@ def rollback_model():
             "data": None,
             "duration": round(duration, 2)
         }), 500
+
 # -------------------- 接口7：动态重载系统配置 --------------------
 @app.route("/api/system/reload_config", methods=["POST"])
 def reload_system_config():
@@ -557,6 +635,7 @@ def reload_system_config():
         current_status = model.get_model_status()
         current_samples = current_status.get("total_samples", 0)
         current_trained = current_status.get("is_trained", False)
+
         logger.info(f"配置重载前状态：累计样本 {current_samples}，训练状态 {'已训练' if current_trained else '未训练'}")
         if reload_database:
             logger.warning("用户请求重载数据库配置，将重建数据库连接")
@@ -723,7 +802,8 @@ def get_performance_diagnosis():
             "total_samples": model.total_samples,
             "is_trained": model.is_trained,
             "has_fixed_eval_set": hasattr(model, 'fixed_evaluation_set') and model.fixed_evaluation_set is not None,
-            "fixed_eval_set_size": len(model.fixed_evaluation_set) if hasattr(model,'fixed_evaluation_set') and model.fixed_evaluation_set is not None else 0,
+            "fixed_eval_set_size": len(model.fixed_evaluation_set) if hasattr(model,
+                                                                              'fixed_evaluation_set') and model.fixed_evaluation_set is not None else 0,
             "training_features_count": len(model.training_features) if model.training_features else 0
         }
         # 获取最近的训练记录
@@ -753,6 +833,7 @@ def set_fixed_evaluation_set():
         request_data = request.get_json() or {}
         evaluation_data = request_data.get("evaluation_data")
         size = request_data.get("size", 50)
+
         if not evaluation_data:
             return jsonify({
                 "success": False,
@@ -770,116 +851,109 @@ def set_fixed_evaluation_set():
             "success": False,
             "message": f"设置固定评估集失败: {str(e)}"
         }), 500
-# app.py - 新增接口：时间特征分析
-@app.route("/api/debug/temporal_analysis", methods=["POST"])
-def analyze_temporal_features():
-    """
-    时间特征分析接口
-    分析同一位置不同时间测量值的变化规律
-    """
-    logger.info("接收到【时间特征分析】请求")
-    start_time = time.time()
-    try:
-        # Step 1: 读取数据
-        request_data = request.get_json() or {}
-        data = request_data.get("data", [])
-        if not data:
-            return jsonify({
-                "success": False,
-                "message": "请求数据不能为空",
-                "duration": round(time.time() - start_time, 2)
-            }), 400
-        # Step 2: 转换为DataFrame进行分析
-        df = pd.DataFrame(data)
-        # Step 3: 检查必要字段
-        required_fields = ['x_coord', 'y_coord', 'z_coord', 'measurement_date', 'gas_emission_q']
-        missing_fields = [field for field in required_fields if field not in df.columns]
-        if missing_fields:
-            return jsonify({
-                "success": False,
-                "message": f"缺少必要字段: {missing_fields}",
-                "missing_fields": missing_fields,
-                "duration": round(time.time() - start_time, 2)
-            }), 400
-        # Step 4: 执行时间特征分析
-        analysis_results = {
-            "sample_count": len(df),
-            "date_range": {
-                "min_date": df['measurement_date'].min(),
-                "max_date": df['measurement_date'].max(),
-                "day_count": (pd.to_datetime(df['measurement_date'].max()) -
-                              pd.to_datetime(df['measurement_date'].min())).days
-            },
-            "spatial_temporal_analysis": [],
-            "recommendations": []
-        }
-        # Step 5: 识别同一位置不同时间的测量
-        # 创建位置标识（四舍五入到1米精度）
-        df['location_key'] = (
-                df['x_coord'].round().astype(str) + '_' +
-                df['y_coord'].round().astype(str) + '_' +
-                df['z_coord'].round().astype(str)
-        )
-        # 按位置分组
-        location_groups = df.groupby('location_key')
 
-        for location_key, group in location_groups:
-            if len(group) > 1:  # 同一位置有多次测量
-                # 按时间排序
-                group_sorted = group.sort_values('measurement_date')
-                # 计算变化
-                q_values = group_sorted['gas_emission_q'].tolist()
-                dates = group_sorted['measurement_date'].tolist()
-                # 计算变化率和趋势
-                if len(q_values) >= 2:
-                    q_change = q_values[-1] - q_values[0]
-                    q_change_percent = (q_change / q_values[0] * 100) if q_values[0] > 0 else 0
-                    analysis_results["spatial_temporal_analysis"].append({
-                        "location": location_key,
-                        "measurement_count": len(group),
-                        "date_range": f"{dates[0]} 至 {dates[-1]}",
-                        "q_values": q_values,
-                        "q_change": round(q_change, 4),
-                        "q_change_percent": round(q_change_percent, 2),
-                        "dates": dates,
-                        "has_significant_change": abs(q_change_percent) > 50  # 变化超过50%视为显著
-                    })
-        # Step 6: 生成建议
-        if analysis_results["spatial_temporal_analysis"]:
-            significant_changes = [a for a in analysis_results["spatial_temporal_analysis"]
-                                   if a["has_significant_change"]]
-            if significant_changes:
-                analysis_results["recommendations"].append(
-                    f"发现{len(significant_changes)}个位置存在显著时间变化（变化>50%），"
-                    f"强烈建议启用时间特征处理"
-                )
-            else:
-                analysis_results["recommendations"].append(
-                    "同一位置不同时间测量值变化较小，时间特征可能不是主要影响因素"
-                )
+# -------------------- 新增接口：分源预测法计算瓦斯涌出量 --------------------
+@app.route("/api/model/calculate_gas_emission_source", methods=["POST"])
+def calculate_gas_emission_source():
+    """
+    分源预测法独立接口：计算瓦斯涌出量（基于AQ1018-2006标准）
+    请求参数示例（JSON，支持单样本/批量）：
+    {
+        "data": [
+            {
+                "coal_thickness": 3.2,              # 煤层厚度（m，必选）
+                "tunneling_speed": 2.5,             # 掘进速度（m/min，必选）
+                "roadway_length": 150.0,            # 巷道长度（m，必选）
+                "roadway_cross_section": 12.5,      # 巷道断面积（m²，必选）
+                "original_gas_content": 15.8,       # 原始瓦斯含量（m³/t，必选）
+                "residual_gas_content": 3.2,        # 残余瓦斯含量（m³/t，必选）
+                "coal_density": 1.45,               # 煤密度（t/m³，可选，默认1.4）
+                "initial_gas_emission_strength": 0.015  # 初始瓦斯涌出强度（可选）
+            }
+        ]
+    }
+    返回结果：包含分源计算瓦斯涌出量及详细分量
+    """
+    logger.info("接收到【分源预测法计算】请求")
+    start_time = time.time()
+
+    try:
+        # 读取请求数据
+        request_data = request.get_json()
+        if not request_data or "data" not in request_data:
+            return jsonify({
+                "success": False,
+                "message": "请求数据中必须包含'data'字段",
+                "data": None,
+                "duration": round(time.time() - start_time, 2)
+            }), 400
+
+        data = request_data["data"]
+        if not isinstance(data, list):
+            data = [data]  # 支持单样本
+
+        logger.info(f"分源预测计算开始，样本数：{len(data)}")
+
+        # 调用分源预测法计算
+        results = source_predictor.calculate_gas_emission_source(data)
+
+        # 统计计算情况
+        success_count = sum(1 for r in results if "calculation_error" not in r)
+        error_count = len(results) - success_count
+
+        # 计算平均瓦斯涌出量
+        valid_results = [r for r in results if "calculation_error" not in r]
+        if valid_results:
+            avg_total = sum(r["total_gas_emission"] for r in valid_results) / len(valid_results)
         else:
-            analysis_results["recommendations"].append(
-                "未发现同一位置的多时间测量，时间特征可能不是主要影响因素"
-            )
-        # Step 7: 返回分析结果
+            avg_total = 0.0
+
         duration = round(time.time() - start_time, 2)
-        logger.info(f"时间特征分析完成，分析{len(df)}条数据，耗时{duration}秒")
-        return jsonify({
+
+        # 记录性能监控
+        global_monitor.record_api_request(
+            endpoint="calculate_gas_emission_source",
+            method="POST",
+            duration=duration,
+            status_code=200,
+            sample_count=len(data)
+        )
+
+        response = {
             "success": True,
-            "message": "时间特征分析完成",
-            "analysis": analysis_results,
-            "duration": duration
-        })
+            "message": f"分源预测法计算完成，成功{success_count}条，失败{error_count}条",
+            "sample_count": len(data),
+            "success_count": success_count,
+            "error_count": error_count,
+            "avg_total_gas_emission": round(avg_total, 4),
+            "calculation_method": "分源预测法(AQ1018-2006标准)",
+            "duration": duration,
+            "results": results
+        }
+
+        logger.info(f"分源预测计算完成：平均总瓦斯涌出量={avg_total:.4f}m³/min")
+        return jsonify(response)
+
     except Exception as e:
         duration = round(time.time() - start_time, 2)
-        error_msg = f"时间特征分析失败：{str(e)}"
+        error_msg = f"分源预测法计算失败：{str(e)}"
         logger.error(error_msg, exc_info=True)
+
+        global_monitor.record_api_request(
+            endpoint="calculate_gas_emission_source",
+            method="POST",
+            duration=duration,
+            status_code=500,
+            sample_count=0
+        )
 
         return jsonify({
             "success": False,
             "message": error_msg,
-            "duration": duration
+            "duration": duration,
+            "results": None
         }), 500
+
 @app.route("/api/monitoring/performance", methods=["GET"])
 def get_performance_metrics():
     """新增接口：获取性能监控指标"""
@@ -944,6 +1018,7 @@ if __name__ == "__main__":
     logger.info("启动煤矿瓦斯风险预测服务")
     logger.info(f"服务地址：{server_config['host']}:{server_config['port']}")
     logger.info(f"调试模式：{'开启' if server_config['debug'] else '关闭'}")
+
     # 启动Flask服务（生产环境建议用Gunicorn/uWSGI，此处为开发/测试用）
     app.run(
         host=server_config["host"],

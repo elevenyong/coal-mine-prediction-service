@@ -13,6 +13,7 @@ from sqlalchemy import create_engine, text
 
 class ModelManager:
     """模型管理器"""
+
     def __init__(self, model_dir):
         self.model_dir = model_dir
         os.makedirs(self.model_dir, exist_ok=True)
@@ -20,9 +21,11 @@ class ModelManager:
         self.features_path = os.path.join(self.model_dir, "training_features.pkl")
         self.algorithm_path = os.path.join(self.model_dir, "algorithm.pkl")
         self.lock_file_path = os.path.join(self.model_dir, "model.lock")
+
     def save_model(self, models, preprocessor, training_features, target_features):
         """
         保存模型组件（预处理模型、特征列表、模型）并创建备份
+
         :param models: 模型字典
         :param preprocessor: 特征预处理器
         :param training_features: 训练特征列表
@@ -33,14 +36,17 @@ class ModelManager:
             if preprocessor:
                 joblib.dump(preprocessor, self.preprocessor_path)
                 logger.debug(f"已保存预处理模型至：{self.preprocessor_path}")
+
             # 保存训练特征列表
             if training_features:
                 joblib.dump(training_features, self.features_path)
                 logger.debug(f"已保存训练特征列表至：{self.features_path}")
+
             # 检测算法类型并保存
             algorithm_type = self._detect_algorithm_type(models)
             joblib.dump(algorithm_type, self.algorithm_path)
             logger.debug(f"检测到算法类型：{algorithm_type}")
+
             # 保存每个目标的模型
             for target, model in models.items():
                 if algorithm_type == "lightgbm":
@@ -55,12 +61,14 @@ class ModelManager:
                         logger.debug(f"已保存目标[{target}]的XGBoost模型至：{model_path}")
                 else:
                     raise ValueError(f"不支持的算法类型: {algorithm_type}")
+
             # 创建时间戳备份
             backup_root = os.path.join(self.model_dir, "backup")
             os.makedirs(backup_root, exist_ok=True)
             backup_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_dir = os.path.join(backup_root, backup_timestamp)
             os.makedirs(backup_dir, exist_ok=True)
+
             # 复制核心文件到备份目录
             for file in [self.preprocessor_path, self.features_path, self.algorithm_path]:
                 if os.path.exists(file):
@@ -73,7 +81,9 @@ class ModelManager:
                 model_path = os.path.join(self.model_dir, model_file)
                 if os.path.exists(model_path):
                     shutil.copy(model_path, backup_dir)
+
             logger.info(f"模型备份完成，备份目录：{backup_dir}，算法类型：{algorithm_type}")
+
             # 清理旧备份（仅保留最近5份）
             backups = sorted(os.listdir(backup_root))
             if len(backups) > 5:
@@ -81,8 +91,10 @@ class ModelManager:
                     old_backup_dir = os.path.join(backup_root, old_backup)
                     shutil.rmtree(old_backup_dir, ignore_errors=True)
                     logger.info(f"清理旧备份：{old_backup_dir}")
+
         except Exception as e:
             logger.error(f"保存模型失败：{str(e)}", exc_info=True)
+
     def _detect_algorithm_type(self, models):
         """检测模型使用的算法类型"""
         if not models:
@@ -112,11 +124,13 @@ class ModelManager:
     def load_model(self, target_features):
         """
         加载已有模型组件
+
         :param target_features: 目标特征列表
         :return: tuple (preprocessor, training_features, models, is_trained)
         """
         import lightgbm as lgb
         import xgboost as xgb
+
         try:
             # 检查核心文件是否存在
             core_files_exist = (os.path.exists(self.preprocessor_path) and
@@ -124,13 +138,16 @@ class ModelManager:
                                 os.path.exists(self.algorithm_path))
             if not core_files_exist:
                 return None, None, {}, False
+
             # 加载算法类型
             algorithm_type = joblib.load(self.algorithm_path)
             logger.debug(f"加载模型算法类型：{algorithm_type}")
+
             # 加载预处理模型与特征列表
             preprocessor = joblib.load(self.preprocessor_path)
             training_features = joblib.load(self.features_path)
             logger.debug(f"加载预处理模型成功，训练特征数：{len(training_features)}")
+
             # 加载每个目标的模型
             models = {}
             loaded_targets = []
@@ -142,6 +159,7 @@ class ModelManager:
                 else:
                     logger.error(f"不支持的算法类型: {algorithm_type}")
                     continue
+
                 if os.path.exists(model_path):
                     try:
                         if algorithm_type == "lightgbm":
@@ -151,14 +169,18 @@ class ModelManager:
                             model = xgb.Booster()
                             model.load_model(model_path)
                             tree_count = len(model.get_dump())
+
                         logger.debug(f"加载目标[{target}]的{algorithm_type}模型成功，树数量：{tree_count}")
+
                         if tree_count <= 1:
                             logger.warning(f"目标[{target}]的模型树数量异常（{tree_count}），可能存在问题")
+
                         models[target] = model
                         loaded_targets.append(target)
                     except Exception as e:
                         logger.error(f"加载目标[{target}]的模型失败：{str(e)}")
                         continue
+
             # 更新训练状态
             is_trained = len(loaded_targets) == len(target_features)
             if is_trained:
@@ -167,10 +189,13 @@ class ModelManager:
                 logger.warning(
                     f"模型加载不完整：仅加载{len(loaded_targets)}/{len(target_features)}个模型"
                 )
+
             return preprocessor, training_features, models, is_trained
+
         except Exception as e:
             logger.error(f"加载模型失败：{str(e)}", exc_info=True)
             return None, None, {}, False
+
     def rollback_model(self, backup_index, target_features):
         """
         模型回滚到指定备份
@@ -185,21 +210,25 @@ class ModelManager:
                 msg = "备份目录不存在，无法回滚"
                 logger.warning(msg)
                 return {"success": False, "message": msg}
+
             # 获取备份列表
             backups = sorted(os.listdir(backup_root), reverse=True)
             if not backups:
                 msg = "无任何模型备份，无法回滚"
                 logger.warning(msg)
                 return {"success": False, "message": msg}
+
             # 验证备份索引
             if abs(backup_index) > len(backups):
                 msg = f"备份索引 {backup_index} 超出范围，共 {len(backups)} 个备份"
                 logger.warning(msg)
                 return {"success": False, "message": msg}
+
             # 恢复指定备份
             target_backup = backups[backup_index]
             target_dir = os.path.join(backup_root, target_backup)
             logger.info(f"回滚到备份：{target_backup}")
+
             # 恢复核心文件
             for file in ["preprocessor.pkl", "training_features.pkl", "algorithm.pkl"]:
                 src = os.path.join(target_dir, file)
@@ -207,6 +236,7 @@ class ModelManager:
                 if os.path.exists(src):
                     shutil.copy(src, dst)
                     logger.info(f"恢复文件：{file}")
+
             # 恢复每个目标的模型文件
             algorithm_path = os.path.join(target_dir, "algorithm.pkl")
             if os.path.exists(algorithm_path):
@@ -219,11 +249,13 @@ class ModelManager:
                     else:
                         logger.error(f"不支持的算法类型: {algorithm_type}")
                         continue
+
                     src = os.path.join(target_dir, model_file)
                     dst = os.path.join(self.model_dir, model_file)
                     if os.path.exists(src):
                         shutil.copy(src, dst)
                         logger.info(f"恢复模型文件：{model_file}")
+
             return {
                 "success": True,
                 "message": f"模型回滚到备份：{target_backup}",
@@ -232,9 +264,11 @@ class ModelManager:
         except Exception as e:
             logger.error(f"回滚失败：{str(e)}", exc_info=True)
             return {"success": False, "message": str(e)}
+
     def get_total_samples_from_db(self, db_utils):
         """
         从数据库查询累计样本数
+
         :param db_utils: 数据库工具实例
         :return: int，累计样本数
         """
@@ -251,9 +285,11 @@ class ModelManager:
         except Exception as e:
             logger.warning(f"查询累计样本数失败：{str(e)}")
             return 0
+
     def get_recent_data_from_db(self, db_utils, limit=None):
         """
         从数据库读取最近N条数据
+
         :param db_utils: 数据库工具实例
         :param limit: 读取样本数限制
         :return: pandas.DataFrame，读取的数据
@@ -265,6 +301,7 @@ class ModelManager:
                 f"{db_conf['host']}:{db_conf['port']}/{db_conf['db']}?charset={db_conf['charset']}"
             )
             engine = create_engine(db_url)
+
             if limit:
                 query_sql = text(f"""
                     SELECT * FROM t_prediction_parameters 
@@ -278,11 +315,14 @@ class ModelManager:
                     ORDER BY distance_from_entrance DESC
                 """)
                 params = {}
+
             with engine.connect() as conn:
                 df = pd.read_sql(query_sql, conn, params=params)
+
             if not df.empty and 'distance_from_entrance' in df.columns:
                 df = df.sort_values(by='distance_from_entrance', ascending=True).reset_index(drop=True)
                 logger.info(f"数据已按掘进距离升序排序（样本数：{len(df)}）")
+
             logger.info(f"数据库读取完成，有效样本数：{len(df)}")
             return df
         except Exception as e:

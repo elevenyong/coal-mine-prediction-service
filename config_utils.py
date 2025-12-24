@@ -8,12 +8,19 @@ from datetime import datetime
 from functools import wraps
 from loguru import logger
 import configparser
+
+
 # -------------------- 全局辅助函数 --------------------
+def now_str():
+    """
+    辅助函数：生成标准时间字符串（用于日志标记、数据时间戳）
+    :return: str，格式如"2025-10-15 16:30:00"
+    """
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def timing_decorator(func):
     """
     装饰器：统计函数执行耗时，输出INFO级日志（用于train/predict等核心方法）
-
     :param func: function，被装饰的函数
     :return: function，包装后的函数（保留原函数元信息）
     """
@@ -46,7 +53,6 @@ def error_handler_decorator(func):
 
 class ConfigUtils:
     """配置工具类，提供通用的配置读取和日志打印方法"""
-
     def __init__(self, config_path="config.ini"):
         self.config_path = config_path
         self.config = configparser.ConfigParser()
@@ -71,7 +77,6 @@ class ConfigUtils:
                 logger.debug(f"成功读取基础配置文件: {base_config_path}")
             else:
                 logger.warning(f"基础配置文件不存在: {base_config_path}")
-
             # 然后读取当前配置（覆盖基础配置）
             if self.config_path != "config.ini" and os.path.exists(self.config_path):
                 read_files = self.config.read(self.config_path, encoding="utf-8")
@@ -86,7 +91,6 @@ class ConfigUtils:
             for section in required_sections:
                 if section not in self.config.sections():
                     logger.warning(f"配置文件缺少核心段: [{section}]")
-
         except configparser.Error as e:
             logger.error(f"配置文件解析错误: {str(e)}")
             raise
@@ -99,14 +103,17 @@ class ConfigUtils:
         if self.config.getboolean("Logging", "verbose_console", fallback=True):
             print(f"\n[{datetime.now().strftime('%H:%M:%S')}] {title}")
             print("-" * 40)
+
     def _print_step(self, msg):
         """私有方法：打印控制台步骤信息（缩进对齐）"""
         if self.config.getboolean("Logging", "verbose_console", fallback=True):
             print(f"│ {msg}")
+
     def _print_result(self, msg):
         """私有方法：打印控制台结果信息（带结果标识）"""
         if self.config.getboolean("Logging", "verbose_console", fallback=True):
             print(f"├─ 结果：{msg}")
+
     def _get_config_value(self, section, key, default, is_int=False, is_float=False,
                           min_value=None, max_value=None):
         """
@@ -120,7 +127,6 @@ class ConfigUtils:
         :param min_value: 最小值限制（数值类型时有效）
         :param max_value: 最大值限制（数值类型时有效）
         :return: 配置值（按类型转换后）
-        注意：不支持 is_bool 参数，布尔值请使用 config.getboolean() 方法
         """
         try:
             if not self.config.has_section(section):

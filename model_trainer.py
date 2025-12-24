@@ -28,10 +28,12 @@ class ModelTrainer:
         self.num_leaves = config.getint("Model", "num_leaves", fallback=31)  # 叶子节点数（整数）
         self.reg_alpha = config.getfloat("Model", "reg_alpha", fallback=0.0)  # L1正则化（浮点数）
         self.reg_lambda = config.getfloat("Model", "reg_lambda", fallback=0.0)  # L2正则化（浮点数）
+
         # XGBoost特定参数
         self.max_depth = config.getint("Model", "max_depth", fallback=6)
         self.subsample = config.getfloat("Model", "subsample", fallback=0.8)
         self.colsample_bytree = config.getfloat("Model", "colsample_bytree", fallback=0.8)
+
         # 从配置读取过拟合判断阈值
         self.overfitting_threshold = config.getfloat("Model", "overfitting_threshold", fallback=1.5)
         self.underfitting_large_threshold = config.getfloat("Model", "underfitting_large_threshold", fallback=0.9)
@@ -39,6 +41,7 @@ class ModelTrainer:
         # 存储训练诊断信息
         self.last_training_details = {}
         logger.info(f"模型训练器初始化完成，使用算法: {self.algorithm}")
+
     def _get_model_params(self):
         """获取当前算法的参数配置"""
         if self.algorithm == "lightgbm":
@@ -183,15 +186,19 @@ class ModelTrainer:
                     params, train_data, self.n_estimators
                 )
             models[target] = model
+
             # 验证实际树数量是否与预期一致
             actual_trees = self._get_tree_count(model)
             if actual_trees != self.n_estimators:
                 logger.warning(f"目标 {target} 实际树数量 ({actual_trees}) 与预期 ({self.n_estimators}) 不一致")
+
             # 计算性能指标（保守诊断）
             train_pred = self._predict_model(model, X_train)
             val_pred = self._predict_model(model, X_val) if use_validation else train_pred
+
             train_rmse = np.sqrt(np.mean((y_train - train_pred) ** 2))
             val_rmse = np.sqrt(np.mean((y_val - val_pred) ** 2))
+
             # 过拟合诊断（保守判断）
             if use_validation:
                 overfitting_ratio = val_rmse / train_rmse if train_rmse > 0 else 1.0
@@ -397,34 +404,6 @@ class ModelTrainer:
                 "✅ 模型拟合状态良好，当前参数配置合理",
                 f"💡 可尝试微调 learning_rate 或 {self.algorithm} 特定参数进一步优化性能"
             ])
-
-        # ============ 新增：时间特征相关建议 ============
-        # 检查是否存在时间特征导致的过拟合
-        if hasattr(self, 'config'):
-            enable_temporal = self.config.getboolean("TemporalFeatures", "enable_temporal_features", fallback=False)
-            if enable_temporal:
-                suggestions.extend([
-                    "🕐 检测到时间特征已启用，如模型表现异常可检查：",
-                    "  • measurement_date 字段格式是否正确（YYYY-MM-DD）",
-                    "  • advance_distance 是否准确反映工作面推进距离",
-                    "  • depth_from_face 是否准确反映测点距工作面距离"
-                ])
-        else:
-            # 检查目标特征中是否有时间相关的过拟合模式
-            temporal_related_issues = []
-            for target, perf in target_performance.items():
-                # 如果验证误差远大于训练误差，可能是时间特征问题
-                if perf.get('use_validation', False) and perf.get('val_rmse', 0) > perf.get('train_rmse', 0) * 1.5:
-                    temporal_related_issues.append(target)
-
-            if temporal_related_issues:
-                suggestions.extend([
-                    "🕐 检测到可能的时间特征相关问题：",
-                    f"  • 目标 {temporal_related_issues} 验证误差较高",
-                    "  • 建议检查同一位置不同时间的数据一致性",
-                    "  • 考虑添加measurement_date和advance_distance字段"
-                ])
-        # ============ 时间特征建议结束 ============
 
         # 添加通用建议
         suggestions.extend([

@@ -28,6 +28,7 @@ class ModelEvaluator(ConfigUtils):
         except Exception:
             self.agg_weights = [1.0, 1.0, 1.0, 1.0]
             logger.warning(f"聚合权重解析失败（配置：{agg_weights_str}），使用默认值[1.0,1.0,1.0,1.0]")
+
     def evaluate_model(self, models, preprocessor, training_features, target_features,
                        fitted_feature_order, db_utils, eval_size=None, eval_df=None):
         """
@@ -75,6 +76,7 @@ class ModelEvaluator(ConfigUtils):
                 self._print_result(msg)
                 return {"status": "warning", "message": msg}
             self._print_step(f"评估样本数：{len(eval_df)}")
+
             # 检查目标列
             missing_targets = [t for t in target_features if t not in eval_df.columns]
             if missing_targets:
@@ -82,6 +84,7 @@ class ModelEvaluator(ConfigUtils):
                 logger.warning(msg)
                 self._print_result(msg)
                 return {"status": "warning", "message": msg}
+
             # 特征对齐
             X_eval = eval_df[training_features]
             y_true = eval_df[target_features].values
@@ -92,12 +95,14 @@ class ModelEvaluator(ConfigUtils):
                 if missing_cols:
                     raise ValueError(f"评估数据缺少特征：{missing_cols}")
                 X_eval = X_eval[fitted_feature_order]
+
             # 特征预处理+模型预测
             X_eval_proc = preprocessor.transform(X_eval)
             if not models:
                 msg = "模型未训练，无法评估"
                 logger.error(msg)
                 return {"status": "error", "message": msg}
+
             # 检测算法类型
             algorithm_type = self._detect_algorithm_type(models)
             logger.debug(f"评估使用算法类型: {algorithm_type}")
@@ -123,8 +128,10 @@ class ModelEvaluator(ConfigUtils):
                     pred = model.predict(dmatrix)
                 else:
                     raise ValueError(f"不支持的算法类型: {algorithm_type}")
+
                 y_pred.append(pred.reshape(-1, 1))
             y_pred = np.hstack(y_pred)
+
             # 计算评估指标
             per_target_metrics = {}
             weighted_rmse_sum = 0.0
@@ -158,6 +165,7 @@ class ModelEvaluator(ConfigUtils):
         except Exception as e:
             logger.error(f"评估失败：{str(e)}", exc_info=True)
             return {"status": "error", "message": str(e)}
+
     def _performance_trigger_check(self, eval_history, baseline_rmse, current_sample_count=None):
         """
         增强的性能检查，考虑数据量因素
@@ -169,6 +177,7 @@ class ModelEvaluator(ConfigUtils):
                 f"避免误报（阈值: {self.perf_drop_ratio:.0%}）"
             )
             return False
+
         # 数据量较少但超过10条：放宽检查条件
         if current_sample_count is not None and current_sample_count <= self.medium_data_threshold:
             adjusted_threshold = self.perf_drop_ratio * 2  # 双倍容忍度
@@ -184,6 +193,7 @@ class ModelEvaluator(ConfigUtils):
                 return result
             finally:
                 self.perf_drop_ratio = original_threshold
+
         # 正常数据量：使用原始检查逻辑
         return self._original_performance_check(eval_history, baseline_rmse)
 
@@ -193,29 +203,36 @@ class ModelEvaluator(ConfigUtils):
         """
         if not eval_history or len(eval_history) < self.perf_window + 1:
             return False
+
         recent_rmse = [h["avg_rmse"] for h in eval_history[-self.perf_window:]]
         recent_avg = sum(recent_rmse) / len(recent_rmse)
         baseline = baseline_rmse or recent_avg
+
         # 防止除以零
         if baseline == 0:
             return False
+
         drop_ratio = (recent_avg - baseline) / baseline
         logger.info(
             f"性能检测：基线RMSE={baseline:.4f}，最近{self.perf_window}次平均={recent_avg:.4f}，下降比例={drop_ratio:.2%}"
         )
+
         trigger = drop_ratio > self.perf_drop_ratio
         if trigger:
             logger.warning(f"性能下降触发：{drop_ratio:.2%} > 阈值{self.perf_drop_ratio:.0%}")
+
         return trigger
 
     def _rollback_if_worse(self, eval_result, baseline_rmse, rollback_callback):
         """私有方法：性能差于基线2倍阈值则回滚到上一版本"""
         if eval_result["status"] != "success":
             return
+
         current_rmse = eval_result["avg_rmse"]
         baseline = baseline_rmse
         if not current_rmse or not baseline:
             return
+
         drop_ratio = (current_rmse - baseline) / baseline
         if drop_ratio > self.perf_drop_ratio * 2:
             drop_ratio_str = f"{drop_ratio:.2%}" if drop_ratio is not None else "未知"
@@ -233,8 +250,10 @@ class ModelEvaluator(ConfigUtils):
         """检测模型使用的算法类型"""
         if not models:
             return "unknown"
+
         # 检查第一个模型来判断算法类型
         first_model = next(iter(models.values()))
+
         # 通过类名判断
         class_name = type(first_model).__name__.lower()
         if 'booster' in class_name and hasattr(first_model, 'num_trees'):

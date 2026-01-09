@@ -1,0 +1,27 @@
+2025-10-22 16:01:15 | INFO | setup_logging:setup_logging:77 - 日志系统初始化完成，日志文件路径：logs\20251022.log，保留备份：10天
+2025-10-22 16:01:15 | INFO | coal_mine_model:__init__:37 - 成功加载配置文件：config.ini
+2025-10-22 16:01:15 | INFO | regional_measure_calculator:_load_regional_measure_config:34 - 区域措施强度配置加载完成：默认煤密度=1.4t/m³，最小煤量阈值=0.001t
+2025-10-22 16:01:15 | INFO | coal_mine_model:__init__:70 - 跨进程锁初始化完成，锁文件路径：models\model.lock
+2025-10-22 16:01:15 | INFO | model_manager:get_total_samples_from_db:197 - 从数据库查询累计样本数：0
+2025-10-22 16:01:15 | INFO | __main__:<module>:35 - Flask应用初始化完成，模型状态：未训练
+2025-10-22 16:01:15 | INFO | __main__:<module>:467 - 启动煤矿瓦斯风险预测服务
+2025-10-22 16:01:15 | INFO | __main__:<module>:468 - 服务地址：0.0.0.0:5000
+2025-10-22 16:01:15 | INFO | __main__:<module>:469 - 调试模式：关闭
+2025-10-22 16:01:33 | INFO | __main__:train_model:144 - 接收到【模型训练】请求
+2025-10-22 16:01:33 | INFO | __main__:train_model:179 - 计算10条样本的断层影响系数
+2025-10-22 16:01:33 | INFO | fault_calculator:calculate_fault_influence_strength:62 - 自动计算断层影响系数
+2025-10-22 16:01:33 | WARNING | fault_calculator:_get_faults_and_points:159 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2025-10-22 16:01:33 | INFO | fault_calculator:calculate_fault_influence_strength:123 - 断层影响系数计算完成：样本数：10，平均值：1.33，最大值：1.69
+2025-10-22 16:01:33 | INFO | __main__:train_model:181 - 断层影响系数计算完成，有效样本数：10
+2025-10-22 16:01:33 | INFO | __main__:train_model:185 - 训练前累计样本数：0，本次训练样本数：10
+2025-10-22 16:01:33 | INFO | coal_mine_model:train:220 - 数据库事务已开启，准备保存训练数据
+2025-10-22 16:01:33 | INFO | coal_mine_model:train:232 - 事务中插入 10 条训练数据（未提交）
+2025-10-22 16:01:33 | INFO | model_trainer:_full_train:121 - 全量训练完成 → 目标：gas_emission_q，训练RMSE：0.0780，验证RMSE：0.0780，树数量：1
+2025-10-22 16:01:33 | INFO | model_trainer:_full_train:121 - 全量训练完成 → 目标：drilling_cuttings_s，训练RMSE：0.1202，验证RMSE：0.1202，树数量：1
+2025-10-22 16:01:33 | INFO | model_trainer:_full_train:121 - 全量训练完成 → 目标：gas_emission_velocity_q，训练RMSE：0.0138，验证RMSE：0.0138，树数量：1
+2025-10-22 16:01:33 | INFO | model_trainer:_full_train:121 - 全量训练完成 → 目标：gas_analysis_index_dh2，训练RMSE：5.5897，验证RMSE：5.5897，树数量：1
+2025-10-22 16:01:33 | INFO | coal_mine_model:train:269 - 事务提交成功，10 条数据已持久化
+2025-10-22 16:01:33 | INFO | model_manager:get_total_samples_from_db:197 - 从数据库查询累计样本数：10
+2025-10-22 16:01:33 | INFO | model_manager:save_model:67 - 模型备份完成，备份目录：models\backup\20251022_160133
+2025-10-22 16:01:33 | INFO | coal_mine_model:train:337 - 训练后评估RMSE: 1.4504
+2025-10-22 16:01:33 | INFO | __main__:train_model:216 - 模型训练完成，状态：success，模式：首次训练，新增样本：10

@@ -10,7 +10,9 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from loguru import logger
 from sklearn.model_selection import train_test_split
-
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+import pandas as pd
 from config_utils import error_handler_decorator
 
 
@@ -431,9 +433,63 @@ class ModelTrainer:
         """
         numeric_cols = [col for col in X.columns if col not in base_categorical]
         categorical_cols = [col for col in X.columns if col in base_categorical]
+        # ===== 关键修复：入模前数值安全清洗（解决extmath invalid value encountered in divide）=====
+        # 说明：
+        #  - SimpleImputer 只能处理 NaN，无法处理 inf/-inf
+        #  - 从数据库回灌训练(retrain_from_db_full)时，advance_rate/pct_change/trend 等可能产生 inf
+        #  - inf 进入 StandardScaler 会触发 extmath 的 invalid value encountered in divide RuntimeWarning
+        # 处理策略（不掩盖问题）：
+        #  - 统计并打印每列 NaN/inf 数量
+        #  - 强制转为数值（errors='coerce'），非法值变 NaN
+        #  - inf/-inf -> NaN（随后由 imputer 补 0）
+        if isinstance(X, pd.DataFrame) and numeric_cols:
+            X = X.copy()
+            inf_counts = {}
+            nan_counts = {}
+            coerced_counts = {}
+            for c in numeric_cols:
+                try:
+                    # 记录转数值前的“不可转”情况（粗略：转前非空，转后变NaN）
+                    before_notna = int(X[c].notna().sum())
+                    X[c] = pd.to_numeric(X[c], errors="coerce")
+                    after_notna = int(X[c].notna().sum())
+                    if after_notna < before_notna:
+                        coerced_counts[c] = before_notna - after_notna
+
+                    # 统计inf/NaN
+                    inf_cnt = int(np.isinf(X[c].to_numpy()).sum())
+                    nan_cnt = int(pd.isna(X[c]).sum())
+                    if inf_cnt > 0:
+                        inf_counts[c] = inf_cnt
+                    if nan_cnt > 0:
+                        nan_counts[c] = nan_cnt
+
+                    # inf -> NaN（由后续imputer补0）
+                    if inf_cnt > 0:
+                        X[c] = X[c].replace([np.inf, -np.inf], np.nan)
+                except Exception:
+                    # 不让诊断影响主流程
+                    continue
+
+            if coerced_counts:
+                logger.warning(f"[诊断] 数值列存在非数值/非法值，已coerce为NaN：{coerced_counts}")
+            if inf_counts:
+                logger.warning(f"[诊断] 数值列存在inf/-inf，已置为NaN：{inf_counts}")
+            # nan_counts 很可能较多（历史/趋势特征），只在较严重时提示
+            if nan_counts and sum(nan_counts.values()) > 0:
+                logger.info(f"[诊断] 数值列NaN统计（后续将由imputer填充0）："
+                            f"top10={dict(list(sorted(nan_counts.items(), key=lambda x: x[1], reverse=True))[:10])}")
+
+        # 数值特征：先补缺失值，再标准化
+        # 说明：从数据库回灌训练时，部分历史/趋势/推进特征在窗口内可能全为NaN；
+        # 若直接StandardScaler，会触发 sklearn/extmath 的 invalid value encountered in divide 告警。
+        num_pipeline = Pipeline(steps=[
+            ("imputer", SimpleImputer(strategy="constant", fill_value=0.0)),
+            ("scaler", StandardScaler())
+        ])
 
         preprocessor = ColumnTransformer([
-            ('num', StandardScaler(), numeric_cols),
+            ('num', num_pipeline, numeric_cols),
             ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_cols)
         ])
 

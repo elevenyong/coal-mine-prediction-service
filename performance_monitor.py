@@ -26,9 +26,23 @@ class PerformanceMonitor:
         self.is_enabled = True
         self.storage_path = "monitoring_data"
         os.makedirs(self.storage_path, exist_ok=True)
+        # 优化：不在import时立刻启动线程，改为首次记录时惰性启动
+        self._monitor_thread_started = False
 
-        # 启动后台监控线程
-        self._start_background_monitoring()
+    def _ensure_background_monitoring(self):
+        """确保后台系统监控线程已启动（惰性启动，避免import即启动）"""
+        if not self.is_enabled:
+            return
+        if self._monitor_thread_started:
+            return
+
+        # 加锁避免并发启动多次
+        with self.lock:
+            if self._monitor_thread_started:
+                return
+            self._start_background_monitoring()
+            self._monitor_thread_started = True
+
 
     def _start_background_monitoring(self):
         """启动后台系统监控"""
@@ -67,6 +81,8 @@ class PerformanceMonitor:
         """记录API请求性能"""
         if not self.is_enabled:
             return
+        # 优化：首次使用时启动后台监控线程
+        self._ensure_background_monitoring()
 
         request_metric = {
             'timestamp': datetime.now().isoformat(),

@@ -9,7 +9,6 @@
 """
 from datetime import datetime
 
-import pandas as pd
 from flask import Flask, request, jsonify
 import time
 import configparser
@@ -32,6 +31,10 @@ server_config = {
     "port": config.getint("Server", "port", fallback=5000),
     "debug": config.getboolean("Server", "debug", fallback=False)
 }
+# -------------------- 日志精简开关（训练接口） --------------------
+# True ：训练接口只输出关键日志（默认，减少刷屏）
+# False：输出详细训练诊断日志（排查数据问题时使用）
+BRIEF_TRAINING_LOGS = config.getboolean("Logging", "brief_training_logs", fallback=True)
 # 3. 初始化Flask应用
 app = Flask(__name__)
 # 4. 初始化数据库工具与核心模型（全局单例，避免重复创建）
@@ -40,6 +43,66 @@ model = CoalMineRiskModel(config_path="config.ini")
 logger.info(f"Flask应用初始化完成，模型状态：{'已训练' if model.is_trained else '未训练'}")
 # 初始化分源预测计算器
 source_predictor = SourcePredictionCalculator(config_path="config.ini")
+# -------------------- 工具方法：将numpy/pandas类型转换为JSON可序列化类型 --------------------
+def _to_json_serializable(obj):
+    """
+    将结果中的 numpy/pandas 标量、NaN、datetime 等转换为 Flask jsonify 可序列化的 Python 原生类型。
+    解决：Object of type int64 is not JSON serializable
+    """
+    # 延迟导入：避免在没有numpy时导致启动失败（项目requirements里一般会有numpy）
+    try:
+        import numpy as np
+    except Exception:
+        np = None
+
+    # 1) None / 原生类型
+    if obj is None or isinstance(obj, (str, int, float, bool)):
+        return obj
+
+    # 2) datetime
+    if isinstance(obj, datetime):
+        return obj.strftime("%Y-%m-%d %H:%M:%S")
+
+    # 3) dict / list / tuple
+    if isinstance(obj, dict):
+        return {str(k): _to_json_serializable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_to_json_serializable(x) for x in obj]
+
+    # 4) numpy 标量 / NaN
+    if np is not None:
+        # numpy scalar -> python scalar
+        if isinstance(obj, np.generic):
+            pyv = obj.item()
+            # 将 NaN/Inf 规范化（MySQL/JSON都不接受NaN）
+            if isinstance(pyv, float) and (np.isnan(pyv) or np.isinf(pyv)):
+                return None
+            return pyv
+        # numpy array -> list
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        # 兼容 np.nan
+        try:
+            if isinstance(obj, float) and (np.isnan(obj) or np.isinf(obj)):
+                return None
+        except Exception:
+            pass
+
+    # 5) pandas 类型（不强依赖pandas）
+    # pandas Timestamp/Timedelta等通常有 to_pydatetime/to_numpy
+    if hasattr(obj, "to_pydatetime"):
+        try:
+            return obj.to_pydatetime().strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            pass
+    if hasattr(obj, "to_numpy"):
+        try:
+            return _to_json_serializable(obj.to_numpy())
+        except Exception:
+            pass
+
+    # 6) 兜底：转字符串（确保接口不崩溃，同时保留信息）
+    return str(obj)
 
 # -------------------- 接口1：区域措施强度计算 --------------------
 @app.route("/api/model/calculate_regional_strength", methods=["POST"])
@@ -160,7 +223,11 @@ def train_model():
                 "training_details": None
             }), 400
         # Step 2: 检查时空数据完整性
-        logger.info("检查时空数据完整性")
+        # 精简模式：用一句话概括；详细模式保留原日志
+        if BRIEF_TRAINING_LOGS:
+            logger.info("开始训练数据校验与增强（时空字段补齐）")
+        else:
+            logger.info("检查时空数据完整性")
         enhanced_data = []
         for i, sample in enumerate(data):
             # 确保有基本标识
@@ -192,8 +259,105 @@ def train_model():
                     logger.warning(f"样本[{i}]无法确定distance_to_face，设为0")
             enhanced_data.append(sample)
         data = enhanced_data
+
+        # Step 2.5: 训练标签硬校验（防止q、S缺失被预处理中位数填充掩盖）
+        # 从配置读取目标字段（默认使用系统配置的两个目标）
+        target_str = config.get("Features", "target_features", fallback="drilling_cuttings_s,gas_emission_velocity_q")
+        target_features = [x.strip() for x in target_str.split(",") if x.strip()]
+
+        # 缺失率阈值：可在ini中配置（不配则默认10%）
+        missing_ratio_threshold = config.getfloat("Model", "target_missing_ratio_threshold", fallback=0.10)
+
+        # 至少需要多少条“标签完整”的样本：可在ini中配置（不配则默认5）
+        min_valid_label_samples = config.getint("Model", "min_valid_label_samples", fallback=5)
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "训练数据为空，无法训练",
+                "training_details": {"input_samples": 0}
+            }), 400
+
+        # 统计每个目标字段缺失情况
+        missing_stats = {}
+        valid_label_count = 0  # q、S都非空的样本数（用于硬门槛）
+        total_count = len(data)
+
+        for t in target_features:
+            missing_count = 0
+            for s in data:
+                v = s.get(t, None)
+                # None/空字符串 视为缺失；数值0允许（不视为缺失）
+                if v is None or (isinstance(v, str) and v.strip() == ""):
+                    missing_count += 1
+            missing_ratio = missing_count / total_count if total_count > 0 else 1.0
+            missing_stats[t] = {
+                "missing_count": missing_count,
+                "total_count": total_count,
+                "missing_ratio": round(missing_ratio, 4)
+            }
+
+        # 计算“标签完整样本数”：所有目标字段均不缺失
+        for s in data:
+            ok = True
+            for t in target_features:
+                v = s.get(t, None)
+                if v is None or (isinstance(v, str) and v.strip() == ""):
+                    ok = False
+                    break
+            if ok:
+                valid_label_count += 1
+
+        # 硬校验1：任一目标字段缺失率超过阈值 -> 拒绝训练
+        high_missing = [t for t, st in missing_stats.items() if st["missing_ratio"] > missing_ratio_threshold]
+        if high_missing:
+            logger.warning(f"训练标签缺失率过高，拒绝训练：{missing_stats}")
+            return jsonify({
+                "status": "error",
+                "message": (
+                    f"训练数据标签缺失率过高，拒绝训练。"
+                    f"阈值={missing_ratio_threshold}，超标字段={','.join(high_missing)}"
+                ),
+                "training_details": {
+                    "input_samples": total_count,
+                    "valid_label_samples": valid_label_count,
+                    "missing_ratio_threshold": missing_ratio_threshold,
+                    "missing_stats": missing_stats
+                }
+            }), 400
+
+        # 硬校验2：标签完整样本数不足 -> 拒绝训练
+        if valid_label_count < min_valid_label_samples:
+            logger.warning(f"标签完整样本数不足，拒绝训练：valid={valid_label_count}, total={total_count}")
+            return jsonify({
+                "status": "error",
+                "message": (
+                    f"标签完整样本数不足，拒绝训练。"
+                    f"至少需要{min_valid_label_samples}条标签完整样本（q、S均不缺失）"
+                ),
+                "training_details": {
+                    "input_samples": total_count,
+                    "valid_label_samples": valid_label_count,
+                    "min_valid_label_samples": min_valid_label_samples,
+                    "missing_stats": missing_stats
+                }
+            }), 400
+
+        # 精简模式：只输出核心结论；详细统计降到DEBUG，避免刷屏
+        logger.info(f"训练标签校验通过：total={total_count}, valid_labels={valid_label_count}")
+        if BRIEF_TRAINING_LOGS:
+            logger.debug(
+                f"训练标签校验详情：threshold={missing_ratio_threshold}, missing_stats={missing_stats}"
+            )
+        else:
+            logger.info(
+                f"训练标签校验通过：total={total_count}, valid_labels={valid_label_count}, "
+                f"threshold={missing_ratio_threshold}, missing_stats={missing_stats}"
+            )
         # Step 3: 时空数据统计
-        logger.info("时空数据统计:")
+        # 精简模式：不逐工作面逐条打印，只保留总览；详细模式保留原日志
+        if not BRIEF_TRAINING_LOGS:
+            logger.info("时空数据统计:")
         all_dates = []
         if data:
             # 按工作面分组统计
@@ -207,8 +371,9 @@ def train_model():
                     set(s.get('measurement_date', '') for s in samples if s.get('measurement_date')))
                 if workface_dates:
                     all_dates.extend(workface_dates)
-                logger.info(
-                    f"  工作面 '{workface}': {len(samples)}条记录，日期范围: {workface_dates[0] if workface_dates else '未知'} 到 {workface_dates[-1] if workface_dates else '未知'}")
+                if not BRIEF_TRAINING_LOGS:
+                    logger.info(
+                        f" 工作面 '{workface}': {len(samples)}条记录，日期范围: {workface_dates[0] if workface_dates else '未知'} 到 {workface_dates[-1] if workface_dates else '未知'}")
                 # 检查同一坐标点的重复测量
                 coord_count = {}
                 for sample in samples:
@@ -217,20 +382,37 @@ def train_model():
                         coord_count[coord_key] = coord_count.get(coord_key, 0) + 1
                 workface_repeated = {k: v for k, v in coord_count.items() if v > 1}
                 if workface_repeated:
-                    logger.info(f"    发现{len(workface_repeated)}个坐标点有重复测量")
+                    if not BRIEF_TRAINING_LOGS:
+                        logger.info(f"发现{len(workface_repeated)}个坐标点有重复测量")
+                    else:
+                        logger.debug(f"发现{len(workface_repeated)}个坐标点有重复测量（已汇总）")
                     repeated_coords.update(workface_repeated)
         dates_list = sorted(set(all_dates)) if all_dates else []
+        # 精简模式：输出一条总览（工作面数 + 日期范围 + 重复坐标数）
+        if BRIEF_TRAINING_LOGS:
+            if dates_list:
+                logger.info(
+                    f"训练数据概览：workfaces={len(workface_groups)}，date_range={dates_list[0]}~{dates_list[-1]}，repeated_coords={len(repeated_coords)}"
+                )
+            else:
+                logger.info(
+                    f"训练数据概览：workfaces={len(workface_groups)}，date_range=未知，repeated_coords={len(repeated_coords)}"
+                )
         # Step 4: 自动计算断层影响系数
         logger.info(f"计算{len(data)}条样本的断层影响系数")
         data_with_fault = model.calculate_fault_influence_strength(data)
         logger.info(f"断层影响系数计算完成，有效样本数：{len(data_with_fault)}")
         # 调试：检查断层计算后的数据
         if data_with_fault and isinstance(data_with_fault, list):
-            logger.info(f"断层计算后数据示例（第一条）：{data_with_fault[0] if data_with_fault else '空'}")
-            logger.info(f"断层计算后数据字段：{list(data_with_fault[0].keys()) if data_with_fault else '空'}")
+            if BRIEF_TRAINING_LOGS:
+                logger.debug(f"断层计算后数据示例（第一条）：{data_with_fault[0] if data_with_fault else '空'}")
+                logger.debug(f"断层计算后数据字段：{list(data_with_fault[0].keys()) if data_with_fault else '空'}")
+            else:
+                logger.info(f"断层计算后数据示例（第一条）：{data_with_fault[0] if data_with_fault else '空'}")
+                logger.info(f"断层计算后数据字段：{list(data_with_fault[0].keys()) if data_with_fault else '空'}")
         # Step 5: 调用模型训练（事务控制）
         initial_samples = model.total_samples
-        logger.info(f"训练前累计样本数：{initial_samples}，本次训练样本数：{len(data_with_fault)}，epochs={epochs}")
+        logger.info(f"开始模型训练：initial_total={initial_samples}，batch={len(data_with_fault)}，epochs={epochs}")
         # 调用模型训练
         train_result = model.train(data=data_with_fault, epochs=epochs)
         # Step 6: 增强返回结果（补充训练前后对比）
@@ -284,7 +466,7 @@ def train_model():
             enhanced_result["evaluation_details"] = train_result["evaluation_details"]
         logger.info(
             f"模型训练完成，状态：{train_result.get('status')}，模式：{training_mode}，新增样本：{enhanced_result['new_samples_added']}")
-        return jsonify(enhanced_result)
+        return jsonify(_to_json_serializable(enhanced_result))
     except Exception as e:
         # 捕获异常并返回错误详情
         duration = time.time() - start_time
@@ -332,6 +514,21 @@ def predict():
                 "data": None,
                 "duration": round(time.time() - start_time, 2)
             }), 400
+        # -------------------- 关键修正：兼容 {"data":[...]} / {"data":{...}} 包装 --------------------
+        # 你当前调用方式是 {"data":[{...}]}，若不解包，会把外层dict当成样本，导致缺少 workface_id 等字段
+        if isinstance(data, dict) and "data" in data:
+            inner = data.get("data")
+            if isinstance(inner, list):
+                data = inner
+            elif isinstance(inner, dict):
+                data = [inner]
+            else:
+                return jsonify({
+                    "success": False,
+                    "message": "请求体字段 data 必须是对象或数组",
+                    "data": None,
+                    "duration": round(time.time() - start_time, 2)
+                }), 400
         # 统一格式为列表（支持单样本/多样本）
         if not isinstance(data, list):
             data = [data]
@@ -349,7 +546,8 @@ def predict():
             "message": predict_result.get("message", ""),
             "sample_count": predict_result.get("sample_count", 0),
             "duration": predict_result.get("duration", 0),
-            "predictions": predict_result.get("predictions", [])
+            # 防御：失败时 predictions 可能为 None，统一返回空列表，避免下游 len(None) 等二次异常
+            "predictions": predict_result.get("predictions") or []
         }
         # 记录预测性能
         duration = time.time() - start_time
@@ -368,7 +566,7 @@ def predict():
             success=True
         )
         logger.info(f"瓦斯指标预测完成，成功预测{len(simplified_result['predictions'])}条样本")
-        return jsonify(simplified_result)
+        return jsonify(_to_json_serializable(simplified_result))
     except Exception as e:
         # 捕获异常并返回错误详情
         duration = time.time() - start_time
@@ -508,8 +706,6 @@ def retrain_model():
             retrain_result["temporal_features_note"] = "重新训练使用了增强的时间特征（掘进天数、距工作面距离、采动影响系数）"
 
             logger.info(f"重新训练使用时空特征，样本数：{processed_samples}")
-
-
 
         # Step 4: 构建增强的返回结果
         duration = round(time.time() - start_time, 2)

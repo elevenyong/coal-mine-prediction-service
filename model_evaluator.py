@@ -18,6 +18,12 @@ class ModelEvaluator(ConfigUtils):
     def __init__(self, config_path="config.ini"):
         super().__init__(config_path)
         self.eval_size = self.config.getint("ModelEval", "eval_size", fallback=200)
+        # 评估集划分策略：
+        # - latest：沿用旧逻辑（按distance_from_entrance排序取最近N条）
+        # - time_holdout：按measurement_date留出最后N天作为评估集（更可信）
+        self.eval_split_mode = self.config.get("ModelEval", "eval_split_mode", fallback="latest").strip().lower()
+        self.holdout_days = self.config.getint("ModelEval", "holdout_days", fallback=3)
+        self.min_holdout_samples = self.config.getint("ModelEval", "min_holdout_samples", fallback=20)
         self.perf_drop_ratio = self.config.getfloat("ModelEval", "perf_drop_ratio", fallback=0.10)
         self.perf_window = self.config.getint("ModelEval", "perf_window", fallback=2)
         self.small_data_threshold = self.config.getint("ModelEval", "small_data_threshold", fallback=10)
@@ -30,7 +36,8 @@ class ModelEvaluator(ConfigUtils):
             logger.warning(f"聚合权重解析失败（配置：{agg_weights_str}），使用默认值[1.0,1.0,1.0,1.0]")
 
     def evaluate_model(self, models, preprocessor, training_features, target_features,
-                       fitted_feature_order, db_utils, eval_size=None, eval_df=None):
+                       fitted_feature_order, db_utils, eval_size=None, eval_df=None,
+                       data_preprocessor=None):
         """
         公开方法：模型评估（计算RMSE/MAE/R²，支持外部传入评估数据）
 
@@ -62,21 +69,107 @@ class ModelEvaluator(ConfigUtils):
                 db_url = f"mysql+pymysql://{db_conf['user']}:{db_conf['password']}@" \
                          f"{db_conf['host']}:{db_conf['port']}/{db_conf['db']}?charset={db_conf['charset']}"
                 engine = create_engine(db_url)
-                query = text("""
-                    SELECT * FROM t_prediction_parameters 
-                    ORDER BY distance_from_entrance DESC 
-                    LIMIT :limit
+                # 修复：不要再用 p.*（p表里可能保留了与f表同名的增强特征列，导致重复列名）
+                # 改为：按“训练所需 + 目标 + 最少索引”动态显式选择 p 列，并显式选择 f 的增强特征列。
+                # 这样可以从根上消灭 duplicate labels，而不是依赖 pandas 事后去重。
+                p_index_cols = [
+                    "id", "working_face", "workface_id", "work_stage",
+                    "roadway", "roadway_id", "measurement_date"
+                ]
+                # p表需要的列：索引 + 训练特征 + 目标
+                p_needed = []
+                for c in (p_index_cols + list(training_features) + list(target_features)):
+                    if c and c not in p_needed:
+                        p_needed.append(c)
+                # f表增强特征列（评估需要的“时空增强/趋势/统计”特征）
+                f_cols = [
+                    "coord_hash",
+                    "spatiotemporal_group",
+                    "distance_to_face_bucket",
+                    "days_since_start",
+                    "days_in_workface",
+                    "distance_time_interaction",
+                    "drilling_cuttings_s_trend",
+                    "gas_emission_velocity_q_trend",
+                    "gas_emission_q_trend",
+                    "drilling_cuttings_s_historical_mean",
+                    "gas_emission_velocity_q_historical_mean",
+                    "advance_rate",
+                ]
+
+                # 关键：如果 p_needed 中已经包含了与 f 同名的增强列，就从 p_needed 中剔除，
+                # 确保这些字段“只来自 f”，从而避免重复列名。
+                p_needed = [c for c in p_needed if c not in set(f_cols)]
+                # 防御：DataFrame 临时列绝不能出现在数据库查询列中
+                p_needed = [c for c in p_needed if isinstance(c, str) and (not c.startswith("_"))]
+                # 你的系统当前不训练 gas_emission_q，且库/缓存表可能不存在该列，评估阶段直接剔除避免Unknown column
+                p_needed = [c for c in p_needed if c != "gas_emission_q"]
+
+                # 简单防注入：只允许字母/数字/下划线的列名
+                def _safe_col(col: str) -> bool:
+                    return isinstance(col, str) and col.replace("_", "").isalnum()
+                p_select_cols = [f"p.{c}" for c in p_needed if _safe_col(c)]
+                f_select_cols = [f"f.{c} AS {c}" for c in f_cols if _safe_col(c)]
+                select_sql = ",\n".join(p_select_cols + f_select_cols)
+                # 为支持 time_holdout，需要先取一批候选数据再按日期筛选
+                candidate_limit = max(int(eval_size * 3), int(eval_size))
+                # 关键修复：部分环境下 LIMIT 绑定参数可能触发 KeyError('limit') / driver 不兼容
+                # 这里将 limit 作为安全的整数字面量拼接（已强制 int），避免绑定失败
+                limit_literal = int(candidate_limit)
+                query = text(f"""
+                    -- 分表方案评估取数（根治重复列名）：
+                    -- 1）核心样本/目标值：来自 t_prediction_parameters（仅取训练所需+目标+最少索引）
+                    -- 2）增强/趋势/统计特征：来自 t_feature_cache（通过pred_id关联）
+                    SELECT
+                        {select_sql}
+                    FROM t_prediction_parameters p
+                    LEFT JOIN t_feature_cache f
+                      ON p.id = f.pred_id
+                    ORDER BY p.measurement_date DESC, p.id DESC
+                    LIMIT {limit_literal}
                 """)
                 with engine.connect() as conn:
-                    eval_df = pd.read_sql(query, conn, params={"limit": eval_size})
+                    eval_df = pd.read_sql(query, conn)
                 eval_df.columns = eval_df.columns.str.strip().str.replace(' ', '_').str.replace('-', '_')
+                # ====== 新增：按 measurement_date 留出最后N天作为评估集（更可信）======
+                if self.eval_split_mode == "time_holdout":
+                    if "measurement_date" not in eval_df.columns:
+                        logger.warning("eval_split_mode=time_holdout，但评估数据缺少measurement_date，回退为latest策略")
+                    else:
+                        dt = pd.to_datetime(eval_df["measurement_date"], errors="coerce")
+                        valid_mask = dt.notna()
+                        if valid_mask.sum() == 0:
+                            logger.warning("time_holdout：measurement_date解析失败（全为NaT），回退为latest策略")
+                        else:
+                            max_dt = dt[valid_mask].max()
+                            cutoff = max_dt - pd.Timedelta(days=max(self.holdout_days, 1))
+                            holdout_df = eval_df[valid_mask & (dt >= cutoff)].copy()
+                            if len(holdout_df) < self.min_holdout_samples:
+                                logger.warning(
+                                    f"time_holdout：最后{self.holdout_days}天样本数={len(holdout_df)} "
+                                    f"< 最小阈值{self.min_holdout_samples}，回退为latest策略"
+                                )
+                            else:
+                                # 同样保持“最近在前”的工程语义：仍按distance_from_entrance排序后取头部
+                                if "distance_from_entrance" in holdout_df.columns:
+                                    holdout_df = holdout_df.sort_values("distance_from_entrance", ascending=False)
+                                eval_df = holdout_df.head(eval_size).copy()
+                                logger.info(
+                                    f"time_holdout评估集启用：holdout_days={self.holdout_days}，"
+                                    f"实际评估样本数={len(eval_df)}，max_date={max_dt.date()}, cutoff={cutoff.date()}"
+                                )
 
+                # 如果未启用time_holdout或回退，则沿用latest：按distance_from_entrance取前eval_size条
+                if len(eval_df) > eval_size:
+                    if "distance_from_entrance" in eval_df.columns:
+                        eval_df = eval_df.sort_values("distance_from_entrance", ascending=False).head(eval_size).copy()
+                    else:
+                        eval_df = eval_df.head(eval_size).copy()
             if eval_df.empty:
                 msg = "未获取到评估样本，跳过评估"
                 self._print_result(msg)
                 return {"status": "warning", "message": msg}
             self._print_step(f"评估样本数：{len(eval_df)}")
-
             # 检查目标列
             missing_targets = [t for t in target_features if t not in eval_df.columns]
             if missing_targets:
@@ -85,34 +178,144 @@ class ModelEvaluator(ConfigUtils):
                 self._print_result(msg)
                 return {"status": "warning", "message": msg}
 
-            # 特征对齐
-            X_eval = eval_df[training_features]
+            # 评估阶段说明：
+            # - 分表方案下，days_*、bucket、trend、historical_mean 等增强特征优先来自 t_feature_cache
+            # - 评估阶段再次调用 DataPreprocessor 生成特征，容易引入pandas布尔歧义错误（Series truth value ambiguous）
+            # - 因此评估阶段默认不再重复跑 preprocess_data，仅做“缺失特征补齐 + 顺序对齐”
+            # 评估输入特征必须与 preprocessor.fit 时一致，否则会出现：
+            # X has N features, but ColumnTransformer is expecting M features as input
+            # 先处理：eval_df 列名重复会导致 reindex 直接失败（cannot reindex on an axis with duplicate labels）
+            try:
+                dup_mask = eval_df.columns.duplicated(keep=False)
+                if dup_mask.any():
+                    dup_cols = eval_df.columns[dup_mask].tolist()
+                    # 只打印去重后的集合，避免日志过长
+                    dup_unique = sorted(set(dup_cols))
+                    logger.error(f"评估数据存在重复列名（将保留首个并丢弃后续重复列）：{dup_unique}")
+                    # 去重：保留第一次出现的列
+                    eval_df = eval_df.loc[:, ~eval_df.columns.duplicated(keep="first")]
+            except Exception as _e:
+                logger.warning(f"评估数据重复列检测/去重失败：{repr(_e)}", exc_info=True)
+            expected_cols = None
+            if hasattr(preprocessor, "feature_names_in_") and preprocessor.feature_names_in_ is not None:
+                expected_cols = list(preprocessor.feature_names_in_)
+            else:
+                # 兼容：旧版本预处理器没有 feature_names_in_，退回使用训练时记录的顺序
+                expected_cols = list(fitted_feature_order) if fitted_feature_order else list(training_features)
+            # ============ 新增：增强特征缺失率/填零率诊断 ============
+            # 目的：
+            # - 明确 t_feature_cache 是否为每条样本生成了增强特征
+            # - 明确哪些增强特征大量缺失/被填0（会显著拉低评估指标，导致R²为负）
+            try:
+                n_rows = len(eval_df)
+                if n_rows > 0:
+                    # 这些字段是你日志中出现重复的“增强特征”，也最容易缺失
+                    enhanced_cols = [
+                        "coord_hash",
+                        "spatiotemporal_group",
+                        "distance_to_face_bucket",
+                        "days_since_start",
+                        "days_in_workface",
+                        "distance_time_interaction",
+                        "drilling_cuttings_s_historical_mean",
+                        "gas_emission_velocity_q_historical_mean",
+                        "drilling_cuttings_s_trend",
+                        "gas_emission_velocity_q_trend",
+                        "advance_rate",
+                    ]
+                    def _fmt(p):
+                        return f"{p * 100:.1f}%"
+                    diag_lines = []
+                    for c in enhanced_cols:
+                        if c not in eval_df.columns:
+                            diag_lines.append(f"  - {c}: 缺列（100.0%）")
+                            continue
+                        s = eval_df[c]
+                        # 缺失率：NaN/None
+                        miss_ratio = float(s.isna().mean())
+                        # 填零率：仅对数值列统计（object列如hash不统计0）
+                        if pd.api.types.is_numeric_dtype(s):
+                            zero_ratio = float((s.fillna(0) == 0).mean())
+                            diag_lines.append(f"  - {c}: 缺失={_fmt(miss_ratio)}, 为0={_fmt(zero_ratio)}")
+                        else:
+                            diag_lines.append(f"  - {c}: 缺失={_fmt(miss_ratio)}")
+                    logger.info("=== 评估输入增强特征缺失诊断（来自t_feature_cache） ===")
+                    for line in diag_lines:
+                        logger.info(line)
+                    # 再对“预处理器期望输入特征”做整体缺失概览（缺列/缺失/为0）
+                    miss_cols = [c for c in expected_cols if c not in eval_df.columns]
+                    if miss_cols:
+                        logger.warning(f"评估数据缺少预处理器期望特征列 {len(miss_cols)} 个（将被补0）：{miss_cols}")
+                    # 对存在的数值特征统计“缺失率均值/填零率均值”
+                    exist_cols = [c for c in expected_cols if c in eval_df.columns]
+                    if exist_cols:
+                        numeric_exist = [c for c in exist_cols if pd.api.types.is_numeric_dtype(eval_df[c])]
+                        if numeric_exist:
+                            miss_mean = float(eval_df[numeric_exist].isna().mean().mean())
+                            zero_mean = float((eval_df[numeric_exist].fillna(0) == 0).mean().mean())
+                            logger.info(
+                                f"=== 评估输入总体概览（仅数值列，n={len(numeric_exist)}） === "
+                                f"平均缺失率={_fmt(miss_mean)}，平均为0率={_fmt(zero_mean)}"
+                            )
+            except Exception as _e:
+                logger.warning(f"评估输入缺失诊断失败：{repr(_e)}", exc_info=True)
+            # 诊断：训练特征列表与预处理器期望不一致时，明确提示（这是真问题，不要掩盖）
+            if training_features is not None and len(training_features) != len(expected_cols):
+                logger.warning(
+                    f"评估输入特征数量异常：training_features={len(training_features)}，"
+                    f"preprocessor期望={len(expected_cols)}。将以preprocessor期望列为准进行对齐。"
+                )
+            # 强制对齐：缺列补0，多列丢弃，顺序严格按 expected_cols
+            X_eval = eval_df.reindex(columns=expected_cols, fill_value=0.0)
             y_true = eval_df[target_features].values
-
-            if list(X_eval.columns) != fitted_feature_order:
-                logger.warning(f"评估特征顺序与训练不一致，重新排序")
-                missing_cols = set(fitted_feature_order) - set(X_eval.columns)
-                if missing_cols:
-                    raise ValueError(f"评估数据缺少特征：{missing_cols}")
-                X_eval = X_eval[fitted_feature_order]
+            # 关键修复：以 preprocessor 在 fit 时记录的 feature_names_in_ 作为“最终顺序”
+            # sklearn 会在 transform 阶段校验输入列名与顺序必须与 fit 一致
+            expected_order = None
+            if hasattr(preprocessor, "feature_names_in_") and preprocessor.feature_names_in_ is not None:
+                expected_order = list(preprocessor.feature_names_in_)
+            else:
+                # 兼容旧版本：退回到 fitted_feature_order
+                expected_order = list(fitted_feature_order) if fitted_feature_order else list(X_eval.columns)
+            # 若 expected_order 中存在缺列，补0（避免直接失败）
+            missing_for_expected = [c for c in expected_order if c not in X_eval.columns]
+            if missing_for_expected:
+                logger.warning(
+                    f"评估数据缺少{len(missing_for_expected)}个预处理器期望特征，自动补0：{missing_for_expected}")
+                for c in missing_for_expected:
+                    X_eval[c] = 0.0
+            # 重排为 expected_order（彻底解决“特征名顺序不一致”）
+            if list(X_eval.columns) != expected_order:
+                logger.warning("评估特征顺序与预处理器fit阶段不一致，按feature_names_in_重新排序")
+                X_eval = X_eval[expected_order]
+            # transform 前清洗 inf/NaN，避免 StandardScaler/统计计算出现 invalid value warning
+            try:
+                import numpy as np
+                X_eval = X_eval.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+            except Exception:
+                pass
 
             # 特征预处理+模型预测
-            X_eval_proc = preprocessor.transform(X_eval)
+            # 说明：sklearn 对 DataFrame 输入会强制校验“特征名+顺序”必须与fit一致；
+            # 即使我们已按 feature_names_in_ 重排，仍可能因列对象差异/重复列等触发校验。
+            # 评估阶段使用 numpy 输入可跳过该校验（前提：已完成顺序对齐）。
+            try:
+                # 此时 X_eval 的列集合/顺序已严格对齐，直接DataFrame输入即可
+                X_eval_proc = preprocessor.transform(X_eval)
+            except Exception as e:
+                logger.error(f"评估特征预处理失败：{repr(e)}", exc_info=True)
+                raise
             if not models:
                 msg = "模型未训练，无法评估"
                 logger.error(msg)
                 return {"status": "error", "message": msg}
-
             # 检测算法类型
             algorithm_type = self._detect_algorithm_type(models)
             logger.debug(f"评估使用算法类型: {algorithm_type}")
-
             y_pred = []
             for target in target_features:
                 if target not in models:
                     raise ValueError(f"未找到目标 {target} 的模型")
                 model = models[target]
-
                 # 根据算法类型进行预测
                 if algorithm_type == "lightgbm":
                     pred = model.predict(X_eval_proc)
@@ -128,10 +331,8 @@ class ModelEvaluator(ConfigUtils):
                     pred = model.predict(dmatrix)
                 else:
                     raise ValueError(f"不支持的算法类型: {algorithm_type}")
-
                 y_pred.append(pred.reshape(-1, 1))
             y_pred = np.hstack(y_pred)
-
             # 计算评估指标
             per_target_metrics = {}
             weighted_rmse_sum = 0.0

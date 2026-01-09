@@ -181,12 +181,10 @@ class FaultCalculator(ConfigUtils):
             # 修复：数据库查询失败时抛出异常，而不是返回空列表
             faults = db_utils.get_faults_by_workface(workface_id)
             valid_faults = []
-
             for fault in faults:
                 fault_id = fault["id"]
                 try:
                     points = db_utils.get_fault_points(fault_id)
-
                     if len(points) >= 2:
                         fault["points"] = points
                         valid_faults.append(fault)
@@ -200,7 +198,6 @@ class FaultCalculator(ConfigUtils):
                 except Exception as e:
                     logger.error(f"查询断层{fault_id}的组成点失败：{str(e)}")
                     # 继续处理其他断层，不中断整个流程
-
             logger.debug(f"工作面{workface_id}共查询到有效断层：{len(valid_faults)}个")
             return valid_faults
         except Exception as e:
@@ -210,7 +207,6 @@ class FaultCalculator(ConfigUtils):
     def _calculate_shortest_distance_to_fault(self, point_x, point_y, point_z, fault_points):
         """
         私有方法：计算掘进位置（3D点）到断层（3D线段）的最短距离
-
         :param point_x: float，掘进位置X坐标（m）
         :param point_y: float，掘进位置Y坐标（m）
         :param point_z: float，掘进位置Z坐标（高程，m）
@@ -228,7 +224,6 @@ class FaultCalculator(ConfigUtils):
             ]
             fault_line = LineString(fault_shapely_points)
             drill_point = Point(point_x, point_y, point_z)
-
             nearest_point = nearest_points(fault_line, drill_point)[0]
             distance = drill_point.distance(nearest_point)
             logger.debug(
@@ -242,7 +237,6 @@ class FaultCalculator(ConfigUtils):
     def _calculate_single_fault_strength(self, drill_x, drill_y, drill_z, fault):
         """
         私有方法：计算单个断层对掘进位置的影响系数（核心公式实现）
-
         :param drill_x: float，掘进位置X坐标
         :param drill_y: float，掘进位置Y坐标
         :param drill_z: float，掘进位置Z坐标
@@ -255,17 +249,14 @@ class FaultCalculator(ConfigUtils):
             fault_height = max(fault.get("fault_height", 0.0), 0.0)
             fault_length = max(fault.get("length", 0.0), 0.0)
             fault_inclination = min(max(fault.get("inclination", 0.0), 0.0), 180.0)
-
             fault_influence_scope = fault.get("influence_scope", self.max_influence_distance)
             if fault_influence_scope <= 0:
                 fault_influence_scope = self.max_influence_distance
                 logger.warning(f"断层{fault_id}影响范围无效（≤0），使用默认{self.max_influence_distance}m")
-
             fault_points = fault.get("points", [])
             if len(fault_points) < 2:
                 logger.warning(f"断层{fault_id}组成点不足2个，影响系数设为0.0")
                 return 0.0
-
             distance_to_fault = self._calculate_shortest_distance_to_fault(
                 drill_x, drill_y, drill_z, fault_points
             )

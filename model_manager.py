@@ -328,3 +328,17 @@ class ModelManager:
         except Exception as e:
             logger.error(f"从数据库读取数据失败：{str(e)}", exc_info=True)
             raise
+
+    def get_locked_algorithm(self):
+        """
+        获取已保存模型对应的算法类型（用于锁定算法）
+        :return: "lightgbm" / "xgboost" / None
+        """
+        try:
+            if os.path.exists(self.algorithm_path):
+                algorithm_type = joblib.load(self.algorithm_path)
+                if algorithm_type in ("lightgbm", "xgboost"):
+                    return algorithm_type
+        except Exception as e:
+            logger.warning(f"读取algorithm.pkl失败：{e}")
+        return None

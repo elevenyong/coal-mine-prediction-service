@@ -5,6 +5,7 @@
 import os
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 from filelock import FileLock
 from loguru import logger
@@ -69,6 +70,8 @@ class CoalMineRiskModel:
         self.preprocessor = None
         self.training_features = None
         self.is_trained = False
+        # 算法锁定：一旦存在已训练模型（algorithm.pkl），系统运行中将忽略配置文件里的algorithm变更
+        self.locked_algorithm = None
         self.total_samples = 0
         self.eval_history = []
         self.training_stats = []
@@ -77,14 +80,26 @@ class CoalMineRiskModel:
 
         # 注意：不再包含瓦斯涌出量相关状态
         self.note = "模型已重构，瓦斯涌出量请使用独立的/calculate_gas_emission_source接口计算"
-
         # Step 6: 初始化数据库工具与跨进程锁
         self.db = DBUtils(config_path=config_path)
         self.file_lock = FileLock(self.model_manager.lock_file_path)
         logger.info(f"跨进程锁初始化完成，锁文件路径：{self.model_manager.lock_file_path}")
-
         # Step 7: 加载已有模型与同步数据库样本数
         self._load_model()
+        # Step 7.1: 算法锁定（若已有模型，后续reload_config/retrain不得切换算法）
+        locked = self.model_manager.get_locked_algorithm()
+        if locked:
+            self.locked_algorithm = locked
+            # 覆盖trainer算法（即使配置文件被修改）
+            if getattr(self.model_trainer, "algorithm", None) != locked:
+                logger.warning(
+                    f"检测到已训练模型算法锁定为 {locked}，将覆盖当前配置/Trainer算法（启动后不可切换）"
+                )
+            self.model_trainer.algorithm = locked
+        else:
+            # 尚未训练过模型：以当前配置为准，但记录为“预期锁定算法”
+            self.locked_algorithm = getattr(self.model_trainer, "algorithm", None)
+
         try:
             self.total_samples = self.model_manager.get_total_samples_from_db(self.db)
         except Exception as e:
@@ -133,6 +148,7 @@ class CoalMineRiskModel:
             current_preprocessor = self.preprocessor
             current_training_features = self.training_features
             current_fitted_feature_order = self._fitted_feature_order
+            current_locked_algorithm = getattr(self, 'locked_algorithm', None)
             current_modules = {
                 'fault_calculator': self.fault_calculator,
                 'regional_calculator': self.regional_calculator,
@@ -166,9 +182,26 @@ class CoalMineRiskModel:
             self.config = merged_config
             logger.debug("配置文件合并完成")
 
+            # Step 3.1: 算法锁定（存在已训练模型时，忽略配置文件中的algorithm变更）
+            locked = current_locked_algorithm or self.model_manager.get_locked_algorithm()
+            if locked:
+            # 读取用户配置中的algorithm（可能不存在）
+                cfg_algo = merged_config.get("Model", "algorithm", fallback=locked).strip().lower()
+                if cfg_algo != locked:
+                   logger.warning(
+                        f"配置文件algorithm={cfg_algo}将被忽略；系统已锁定算法={locked}（启动后不可切换）"
+                   )
+                # 强制写回合并后的配置，确保后续重建Trainer使用锁定算法
+                if not merged_config.has_section("Model"):
+                    merged_config.add_section("Model")
+                merged_config.set("Model", "algorithm", locked)
+                self.locked_algorithm = locked
+            else:
+                # 未训练模型时，允许以配置为准，并记录为预期锁定算法
+                self.locked_algorithm = merged_config.get("Model", "algorithm",fallback="lightgbm").strip().lower()
+
             # Step 4: 重新初始化配置工具和各模块,使用合并后的配置对象来初始化各模块
             self.config_utils = ConfigUtils(self.config_path)
-
             # 重新初始化各功能模块
             self.fault_calculator = FaultCalculator(self.config_path)
             self.regional_calculator = RegionalMeasureCalculator(self.config_path)
@@ -176,6 +209,28 @@ class CoalMineRiskModel:
             self.model_trainer = ModelTrainer(self.config)
             self.model_evaluator = ModelEvaluator(self.config_path)
             self.model_manager = ModelManager(self.model_dir)
+            # ------------------------------------------------------------------
+            # 增量训练窗口参数（用于单天批次自动补历史窗口，避免时序漂移）
+            # ------------------------------------------------------------------
+            try:
+                self.incremental_lookback_days = self.config.getint(
+                    "Model", "incremental_lookback_days", fallback=7
+                )
+            except Exception:
+                self.incremental_lookback_days = 7
+
+            try:
+                self.incremental_window_limit = self.config.getint(
+                    "Model", "incremental_window_limit", fallback=3000
+                )
+            except Exception:
+                self.incremental_window_limit = 3000
+
+            logger.info(
+                f"增量训练窗口参数加载完成："
+                f"lookback_days={self.incremental_lookback_days}, "
+                f"window_limit={self.incremental_window_limit}"
+            )
 
             # Step 5: 条件性重载数据库配置
             if reload_database:
@@ -235,6 +290,8 @@ class CoalMineRiskModel:
             self.model_evaluator = current_modules['model_evaluator']
             self.model_manager = current_modules['model_manager']
             self.db = current_modules['db']
+            # 恢复算法锁定状态
+            self.locked_algorithm = current_locked_algorithm
             self._print_result(f"配置重载失败：{str(e)}")
             return False
 
@@ -363,36 +420,7 @@ class CoalMineRiskModel:
                 logger.info(f"训练特征: {self.training_features}")
                 logger.info(f"目标特征: {self.data_preprocessor.target_features}")
 
-                if len(df) < self.min_train_samples:
-                    msg = f"样本数 {len(df)} < 最小训练样本数 {self.min_train_samples}，跳过训练"
-                    logger.warning(msg)
-                    self._print_result(msg)
-                    return {
-                        "status": "warning",
-                        "message": msg,
-                        "training_stats": {"processed_samples": len(df), "training_performed": False}
-                    }
-
-                # 检查训练特征和目标特征是否存在
-                missing_features = []
-                if self.training_features:
-                    missing_features = [f for f in self.training_features if f not in df.columns]
-
-                if missing_features:
-                    logger.error(f"训练数据缺少特征: {missing_features}")
-                    logger.error(f"可用特征: {list(df.columns)}")
-                    raise ValueError(f"训练数据缺少特征: {missing_features}")
-
-                missing_targets = []
-                if self.data_preprocessor.target_features:
-                    missing_targets = [t for t in self.data_preprocessor.target_features if t not in df.columns]
-
-                if missing_targets:
-                    logger.error(f"训练数据缺少目标特征: {missing_targets}")
-                    raise ValueError(f"训练数据缺少目标特征: {missing_targets}")
-
-                # 继续原有流程...
-                # ============ 新增：自动配置切换逻辑 ============
+                # ============ 先执行：自动配置切换逻辑（确保训练特征以最终配置为准） ============
                 # 判断是否初次训练（模型未训练且数据库样本数为0）
                 is_initial_training = not self.is_trained and initial_samples == 0
 
@@ -430,11 +458,146 @@ class CoalMineRiskModel:
                     logger.debug(f"无需切换配置：{reason}")
                 # ============ 自动配置切换逻辑结束 ============
 
+                # 配置切换后再打印一次，便于审计最终生效的特征配置
+                logger.info(f"[配置切换后] 训练特征: {self.training_features}")
+                # ============ 强制剔除 gas_emission_q 相关特征（根治缺列导致训练失败） ============
+                try:
+                    if self.training_features:
+                        before = list(self.training_features)
+                        self.training_features = [
+                            f for f in self.training_features
+                            if not (f == "gas_emission_q"
+                                    or f.startswith("gas_emission_q_")
+                                    or "gas_emission_q_" in f)
+                        ]
+                        removed = [f for f in before if f not in self.training_features]
+                        if removed:
+                            logger.warning(f"已强制剔除 {len(removed)} 个 gas_emission_q 相关特征：{removed}")
+                            logger.info(f"剔除后训练特征数：{len(before)} -> {len(self.training_features)}")
+                            logger.info(f"剔除后训练特征列表：{self.training_features}")
+
+                        # 同步给 data_preprocessor（保证训练/预测/评估一致）
+                        if hasattr(self.data_preprocessor, "training_features"):
+                            self.data_preprocessor.training_features = self.training_features
+                except Exception as _e:
+                    logger.warning(f"强制剔除 gas_emission_q 特征失败（已忽略）：{repr(_e)}", exc_info=True)
+                # ============ 强制剔除结束 ============
+
+                # ============ 新增：自动特征降级 / 自动恢复（升级） ============
+                # 冷启动阶段常见：days_* / distance_time_interaction / advance_rate 恒为0或无信息量，自动剔除降噪；
+                # 当后续数据具备时间跨度/推进信息时自动恢复。
+                try:
+                    if not self.training_features:
+                        raise ValueError("training_features为空，无法执行自动特征降级")
+
+                    # 固化“配置层面”的全量特征（首次进入train时记录一次）
+                    if not hasattr(self, "_configured_training_features") or not self._configured_training_features:
+                        self._configured_training_features = list(self.training_features)
+
+                    degrade_candidates = [
+                        "days_since_start",
+                        "days_in_workface",
+                        "distance_time_interaction",
+                        "advance_rate",
+                    ]
+
+                    def _is_degenerate_feature(_df: pd.DataFrame, col: str):
+                        """判断特征是否退化；返回(是否退化, 原因)"""
+                        if col not in _df.columns:
+                            return True, "缺列"
+                        s = _df[col]
+                        # 统一处理inf
+                        try:
+                            if pd.api.types.is_numeric_dtype(s):
+                                s = s.replace([np.inf, -np.inf], np.nan)
+                        except Exception:
+                            pass
+                        # 全空
+                        if s.isna().all():
+                            return True, "全缺失"
+                        # 常数列（含全为0）
+                        try:
+                            nunq = int(s.nunique(dropna=True))
+                        except Exception:
+                            nunq = 2  # 保守：不判退化
+                        if nunq <= 1:
+                            if pd.api.types.is_numeric_dtype(s):
+                                try:
+                                    if (s.fillna(0) == 0).all():
+                                        return True, "常数列（全为0）"
+                                except Exception:
+                                    pass
+                            return True, "常数列（nunique<=1）"
+                        return False, "OK"
+                    # 1) 自动降级：剔除退化特征
+                    removed = []
+                    reasons_map = {}
+                    for c in degrade_candidates:
+                        deg, why = _is_degenerate_feature(df, c)
+                        if deg and c in self.training_features:
+                            removed.append(c)
+                            reasons_map[c] = why
+                    # 2) 自动恢复：当退化特征在新数据中有信息量则恢复（按配置顺序）
+                    restored = []
+                    for c in degrade_candidates:
+                        if c in getattr(self, "_configured_training_features", []) and c not in self.training_features:
+                            deg, _ = _is_degenerate_feature(df, c)
+                            if not deg:
+                                restored.append(c)
+                    if removed or restored:
+                        before_cnt = len(self.training_features)
+                        active = list(self.training_features)
+                        # 先恢复（按配置顺序）
+                        if restored:
+                            cfg = list(self._configured_training_features)
+                            active_set = set(active) | set(restored)
+                            active = [x for x in cfg if x in active_set]
+                        # 再剔除
+                        if removed:
+                            active = [x for x in active if x not in set(removed)]
+                        self.training_features = active
+                        # 同步到预处理器（预测/评估对齐需要）
+                        if hasattr(self.data_preprocessor, "training_features"):
+                            self.data_preprocessor.training_features = self.training_features
+                        after_cnt = len(self.training_features)
+                        if removed:
+                            logger.warning(
+                                f"自动特征降级：剔除{len(removed)}个退化特征 -> {removed}，原因={reasons_map}"
+                            )
+                        if restored:
+                            logger.info(f"自动特征恢复：恢复{len(restored)}个特征 -> {restored}")
+                        logger.info(f"本次训练生效特征数：{before_cnt} -> {after_cnt}")
+                        logger.info(f"本次训练生效特征列表：{self.training_features}")
+                except Exception as _e:
+                    logger.warning(f"自动特征降级/恢复执行失败（已忽略）：{repr(_e)}", exc_info=True)
+                # ============ 自动特征降级 / 自动恢复结束 ============
+
+                if len(df) < self.min_train_samples:
+                    msg = f"样本数 {len(df)} < 最小训练样本数 {self.min_train_samples}，跳过训练"
+                    logger.warning(msg)
+                    self._print_result(msg)
+                    return {
+                        "status": "warning",
+                        "message": msg,
+                        "training_stats": {"processed_samples": len(df), "training_performed": False}
+                    }
+                # 因为增量训练会回捞lookback窗口，最终训练集(train_df)可能通过DB补齐增强特征列
+                missing_features = []
+                if self.training_features:
+                    missing_features = [f for f in self.training_features if f not in df.columns]
+                if missing_features:
+                    logger.warning(f"本批训练df缺少特征(可能由窗口train_df补齐)：{missing_features}")
+                    logger.debug(f"本批df可用列: {list(df.columns)}")
+                missing_targets = []
+                if self.data_preprocessor.target_features:
+                    missing_targets = [t for t in self.data_preprocessor.target_features if t not in df.columns]
+                if missing_targets:
+                    logger.error(f"训练数据缺少目标特征: {missing_targets}")
+                    raise ValueError(f"训练数据缺少目标特征: {missing_targets}")
                 # Step 2: 开启数据库事务
                 db_conn = self.db._get_connection()
                 db_trans = db_conn.begin()
                 logger.info("数据库事务已开启，准备保存训练数据")
-
                 # Step 3: 保存数据到数据库
                 custom_create_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
                 saved_count = self.db.save_training_data(
@@ -446,28 +609,15 @@ class CoalMineRiskModel:
                 if saved_count == 0:
                     raise ValueError("数据保存到数据库失败（保存条数为0）")
                 logger.info(f"事务中插入 {saved_count} 条训练数据（未提交）")
-
-                # Step 4: 构建训练集
-                X = df[self.training_features]
-                y = df[self.data_preprocessor.target_features].values
-                self._fitted_feature_order = X.columns.tolist()
-
-                logger.info(f"构建训练集: X形状={X.shape}, y形状={y.shape}")
-
-                # Step 5: 特征预处理
-                self.preprocessor, X_proc, _ = self.model_trainer.create_preprocessor(X, self.data_preprocessor.base_categorical)
-
-                # Step 6: 判断训练模式
+                # Step 4: 判断训练模式（先判断模式，再决定是否允许重建预处理器）
                 current_total = initial_samples + len(df)
                 threshold_hit = (current_total % self.full_train_threshold == 0)
-
                 # 传递数据量信息的性能检查
                 perf_trigger = self.model_evaluator._performance_trigger_check(
                     self.eval_history,
                     self.baseline_rmse,
                     len(df)  # 传递当前训练数据量
                 )
-
                 if perf_trigger:
                     do_full_train = True
                     reason = "性能下降触发"
@@ -481,30 +631,115 @@ class CoalMineRiskModel:
                     do_full_train = False
                     reason = "增量训练"
                 self._print_step(f"训练模式判断：{reason}")
+                # Step 5: 构建训练集（增量训练：只要进入增量模式就强制lookback窗口，确保必然生效）
+                train_df = df
+                if (not do_full_train) and self.is_trained:
+                    # 读取窗口参数
+                    try:
+                        lookback_days = self.config.getint("Model", "incremental_lookback_days", fallback=14)
+                    except Exception:
+                        lookback_days = 14
+                    try:
+                        window_limit = self.config.getint("Model", "incremental_window_limit", fallback=2000)
+                    except Exception:
+                        window_limit = 2000
+                    # 以“本批次最大日期”作为窗口上界（保证同事务未提交数据也能纳入）
+                    max_date = None
+                    try:
+                        if "measurement_date" in df.columns:
+                            _mx = pd.to_datetime(df["measurement_date"], errors="coerce").max()
+                            if pd.notna(_mx):
+                                max_date = str(_mx.date())
+                    except Exception:
+                        max_date = None
+                    workface_ids = None
+                    try:
+                        if "workface_id" in df.columns:
+                            workface_ids = sorted({int(float(x)) for x in df["workface_id"].dropna().unique()})
+                    except Exception:
+                        workface_ids = None
+                    try:
+                        # 说明：
+                        #  - 这里用同一个 db_conn（同事务）取数，可“看到”刚插入未提交的数据
+                        #  - 从而保证窗口一定包含当前批次 + 历史lookback
+                        train_df = self.db.fetch_recent_training_window_with_features(
+                            workface_ids=workface_ids,
+                            max_date=max_date,
+                            lookback_days=int(lookback_days),
+                            limit=int(window_limit),
+                            conn=db_conn
+                        )
+                        if train_df is None or train_df.empty:
+                            logger.warning("增量训练窗口取数为空，回退为仅本批次df训练")
+                            train_df = df
+                        else:
+                            logger.info(
+                                f"增量训练窗口已生效：lookback_days={lookback_days}，window_limit={window_limit}，"
+                                f"实际训练样本={len(train_df)}（含当前批次）"
+                            )
+                    except Exception as _e:
+                        logger.warning(f"增量训练窗口拉取失败（回退为仅本批次df训练）：{repr(_e)}", exc_info=True)
+                        train_df = df
+                # 训练目标 y 必须来自 train_df（否则窗口即使拼了也等于没生效）
+                y = train_df[self.data_preprocessor.target_features].values
+                if (not do_full_train) and self.is_trained:
+                    # --- 增量训练：强制使用已fit的特征顺序与已fit的预处理器 ---
+                    if not getattr(self, "_fitted_feature_order", None):
+                        logger.warning("增量训练：未找到已fit特征顺序，自动切换为全量训练")
+                        do_full_train = True
+                        reason = "特征顺序缺失触发全量训练"
+                    if self.preprocessor is None:
+                        logger.warning("增量训练：未找到已fit预处理器，自动切换为全量训练")
+                        do_full_train = True
+                        reason = "预处理器缺失触发全量训练"
 
-                # Step 7: 执行训练
+                if do_full_train:
+                    # 全量训练：允许使用当前training_features并重新fit预处理器
+                    X = train_df[self.training_features]
+                    self._fitted_feature_order = X.columns.tolist()
+                    logger.info(f"构建训练集: X形状={X.shape}, y形状={y.shape}")
+                    self.preprocessor, X_proc, _ = self.model_trainer.create_preprocessor(
+                        X, self.data_preprocessor.base_categorical
+                    )
+                else:
+                    # 增量训练：固定特征集合，缺失列补0，避免“自动特征降级/恢复”导致维度变化
+                    fitted_cols = list(self._fitted_feature_order)
+                    missing = [c for c in fitted_cols if c not in train_df.columns]
+                    if missing:
+                        # 这里不直接报错，而是补0：因为有些增强特征在新批次/历史窗口可能暂时不可得
+                        logger.warning(f"增量训练：训练集(df, 含窗口)缺失{len(missing)}个已fit特征，将补0：{missing}")
+                    X = train_df.reindex(columns=fitted_cols, fill_value=0)
+                    logger.info(f"构建训练集(增量): X形状={X.shape}, y形状={y.shape}")
+                    # 关键：只transform，不再fit，确保输出维度恒定
+                    X_proc = self.preprocessor.transform(X)
+                # Step 6: 执行训练
                 if do_full_train:
                     self.models = self.model_trainer._full_train(X_proc, y, self.data_preprocessor.target_features)
                 else:
-                    self.models = self.model_trainer._incremental_train(X_proc, y, self.data_preprocessor.target_features, self.models)
+                    self.models = self.model_trainer._incremental_train(
+                        X_proc, y, self.data_preprocessor.target_features, self.models
+                    )
+                # 防御：训练器若异常返回非dict（历史遗留），立即失败触发回滚，避免“数据提交但模型异常”
+                if not isinstance(self.models, dict):
+                    raise ValueError(f"训练失败：models类型异常({type(self.models).__name__})，将触发回滚")
 
                 # Step 8: 提交事务+更新状态
                 db_trans.commit()
                 logger.info(f"事务提交成功，{saved_count} 条数据已持久化")
+                # 关键修复：事务已提交，后续即使评估失败也不允许再rollback
+                db_trans = None
                 self.total_samples = self.model_manager.get_total_samples_from_db(self.db)
                 new_samples = self.total_samples - initial_samples
                 self._print_step(f"样本数更新：新增 {new_samples} 条，累计 {self.total_samples} 条")
-
                 # Step 9: 保存模型+标记训练状态
-                self.model_manager.save_model(self.models, self.preprocessor, self.training_features, self.data_preprocessor.target_features)
+                self.model_manager.save_model(
+                    self.models, self.preprocessor, self.training_features, self.data_preprocessor.target_features
+                )
                 self.is_trained = True
-                # 同步状态到预处理器
                 self.data_preprocessor.is_trained = True
                 self.data_preprocessor.training_features = self.training_features
-
-                # Step 10: 训练后评估（小数据特殊处理）
+                # Step 10: 训练后评估（评估失败只降级，不影响训练成功）
                 if len(df) <= 5:
-                    # 极少量数据：跳过评估，避免不准确的RMSE影响基线
                     eval_result = {
                         "status": "skipped",
                         "message": f"数据量过少({len(df)}条)，跳过评估避免误判",
@@ -513,10 +748,14 @@ class CoalMineRiskModel:
                     agg_rmse = None
                     logger.info(f"小数据训练({len(df)}条)：跳过性能评估")
                 else:
-                    # 正常数据量：执行评估
-                    eval_result = self.evaluate_model()
-                    agg_rmse = eval_result.get("avg_rmse")
-
+                    try:
+                        eval_result = self.evaluate_model()
+                        agg_rmse = eval_result.get("avg_rmse")
+                    except Exception as _e:
+                        # 评估失败不应导致训练失败，更不允许回滚已提交数据
+                        logger.error(f"训练后评估失败（将降级为warning，不影响训练提交）：{repr(_e)}", exc_info=True)
+                        eval_result = {"status": "warning", "message": f"评估失败：{str(_e)}"}
+                        agg_rmse = None
                 # Step 11: 智能设置性能基线
                 if agg_rmse and self.baseline_rmse is None:
                     # 首次设置基线
@@ -526,22 +765,18 @@ class CoalMineRiskModel:
                     # 只有数据量足够时才更新基线，避免小数据干扰
                     self.baseline_rmse = agg_rmse
                     logger.info(f"更新性能基线: {agg_rmse:.4f}")
-
                 # Step 12: 性能回滚检查（添加小数据保护）
                 # 修正：使用正确的变量名 agg_rmse 而不是 current_rmse
                 if (eval_result["status"] == "success" and
                         agg_rmse is not None and  # 修正：使用 agg_rmse
                         self.baseline_rmse is not None and
                         len(df) > 10):  # 只有数据量>10时才检查性能下降
-
                     drop_ratio = (agg_rmse - self.baseline_rmse) / self.baseline_rmse  # 修正：使用正确的变量
-
                     # 添加详细的性能诊断日志
                     logger.info(f"=== 性能检查诊断 ===")
                     logger.info(f"训练数据: {len(df)}条, 当前RMSE: {agg_rmse:.4f}")  # 修正：使用 agg_rmse
                     logger.info(f"基线RMSE: {self.baseline_rmse:.4f}, 下降比例: {drop_ratio:.2%}")
                     logger.info(f"阈值: {self.model_evaluator.perf_drop_ratio * 2:.2%}")
-
                     if drop_ratio > self.model_evaluator.perf_drop_ratio * 2:
                         logger.warning(f"性能下降过多（{drop_ratio:.2%}），尝试回滚")
                         rollback_res = self.rollback_model(backup_index=-2)
@@ -617,7 +852,9 @@ class CoalMineRiskModel:
 
             except Exception as e:
                 # 训练失败 → 回滚事务
-                logger.error(f"训练失败，触发回滚：{str(e)}", exc_info=True)
+                # 关键：str(e) 可能被外层 KeyError 等覆盖，增加 repr(e) 便于定位真实根因
+                logger.error(f"训练失败，触发回滚（str）：{str(e)}", exc_info=True)
+                logger.error(f"训练失败，触发回滚（repr）：{repr(e)}", exc_info=True)
                 # 训练失败时也记录监控
                 train_duration = (datetime.now() - train_start).total_seconds()
                 from performance_monitor import global_monitor
@@ -640,7 +877,8 @@ class CoalMineRiskModel:
                             logger.info(f"手动删除残留数据（create_time：{custom_create_time}）")
                 return {
                     "status": "error",
-                    "message": str(e),
+                    # 返回 message 同时带上 repr(e)，避免只看到 "'pred_id'" 这种被覆盖的信息
+                    "message": f"{str(e)} | {repr(e)}",
                     "training_stats": {
                         "processed_samples": len(df) if 'df' in locals() else 0,
                         "saved_to_db": saved_count,
@@ -670,7 +908,8 @@ class CoalMineRiskModel:
 
         return self.model_evaluator.evaluate_model(
             self.models, self.preprocessor, self.training_features, self.data_preprocessor.target_features,
-            self._fitted_feature_order, self.db, eval_size, eval_df
+            self._fitted_feature_order, self.db, eval_size, eval_df,
+            data_preprocessor=self.data_preprocessor
         )
 
     def predict(self, data):

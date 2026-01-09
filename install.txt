@@ -1,0 +1,23 @@
+pip install -i https://mirrors.cloud.tencent.com/pypi/simple/ --default-timeout=100 -r requirements.txt
+
+# 动态切换到阶段1配置（不重启服务）
+curl -X POST http://localhost:5000/api/system/reload_config \
+  -H "Content-Type: application/json" \
+  -d '{"config_file": "config_phase1_initial.ini"}'
+
+# 执行200条数据初始训练
+curl -X POST http://localhost:5000/api/model/train \
+  -H "Content-Type: application/json" \
+  -d @initial_200_data.json
+
+
+
+# 动态切换到阶段2配置
+curl -X POST http://localhost:5000/api/system/reload_config \
+  -H "Content-Type: application/json" \
+  -d '{"config_file": "config_phase2_daily.ini"}'
+
+# 开始日常增量训练（每2天4条数据）
+curl -X POST http://localhost:5000/api/model/train \
+  -H "Content-Type: application/json" \
+  -d @daily_4_data.json

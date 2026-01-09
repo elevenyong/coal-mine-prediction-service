@@ -46,8 +46,8 @@ def error_handler_decorator(func):
         except Exception as e:
             # 记录详细异常信息（含堆栈）
             logger.error(f"【方法异常】{func.__name__} 执行失败: {str(e)}", exc_info=True)
-            # 返回标准化错误结果（便于上层统一处理）
-            return {"status": "error", "message": str(e), "method": func.__name__}
+            # 关键：不要吞异常。训练链路需要依赖异常触发事务回滚，避免“数据提交但模型失败”的脏状态
+            raise
     return wrapper
 
 

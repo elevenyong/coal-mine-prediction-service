@@ -1,0 +1,32 @@
+2026-01-14 14:30:48 | INFO | setup_logging:setup_logging:124 - 日志系统初始化完成，日志文件路径：logs\20260114.log，保留备份：10天，log_level=INFO，verbose_console=True，brief_training_logs=False
+2026-01-14 14:30:48 | WARNING | db_utils:__init__:37 - [诊断] 正在加载 DBUtils 文件：E:\coal-mine-prediction-service\db_utils.py
+2026-01-14 14:30:48 | INFO | coal_mine_model:__init__:48 - 成功加载配置文件：config.ini
+2026-01-14 14:30:48 | INFO | regional_measure_calculator:_load_regional_measure_config:34 - 区域措施强度配置加载完成：默认煤密度=1.4t/m³，最小煤量阈值=0.001t
+2026-01-14 14:30:48 | INFO | model_trainer:__init__:45 - 模型训练器初始化完成，使用算法: lightgbm
+2026-01-14 14:30:48 | WARNING | db_utils:__init__:37 - [诊断] 正在加载 DBUtils 文件：E:\coal-mine-prediction-service\db_utils.py
+2026-01-14 14:30:48 | INFO | coal_mine_model:__init__:86 - 跨进程锁初始化完成，锁文件路径：models\model.lock
+2026-01-14 14:30:48 | INFO | model_manager:load_model:256 - 模型加载成功：2个目标lightgbm模型+预处理模型
+2026-01-14 14:30:48 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：7002
+2026-01-14 14:30:48 | INFO | coal_mine_model:__init__:112 - 当前配置文件：config.ini
+2026-01-14 14:30:48 | INFO | __main__:<module>:43 - Flask应用初始化完成，模型状态：已训练
+2026-01-14 14:30:48 | INFO | source_prediction:_load_source_prediction_params:31 - 分源预测法配置加载完成
+2026-01-14 14:30:48 | INFO | __main__:<module>:1214 - 启动煤矿瓦斯风险预测服务
+2026-01-14 14:30:48 | INFO | __main__:<module>:1215 - 服务地址：0.0.0.0:5000
+2026-01-14 14:30:48 | INFO | __main__:<module>:1216 - 调试模式：关闭
+2026-01-14 14:32:06 | INFO | __main__:predict:504 - 接收到【瓦斯指标预测】请求
+2026-01-14 14:32:06 | INFO | __main__:predict:535 - 预测样本数：1
+2026-01-14 14:32:06 | INFO | __main__:predict:537 - 计算预测样本的断层影响系数
+2026-01-14 14:32:06 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:32:06 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:32:06 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：1，有效计算：1，平均值：0.5，最大值：0.5
+2026-01-14 14:32:06 | INFO | __main__:predict:539 - 断层影响系数计算完成，有效样本数：1
+2026-01-14 14:32:06 | INFO | model_predictor:predict:80 - 模型预测开始（已移除瓦斯涌出量预测）
+2026-01-14 14:32:06 | INFO | model_predictor:predict:99 - 预测样本数：1
+2026-01-14 14:32:06 | WARNING | model_predictor:predict:112 - 预测输入缺失2个训练特征，将补0：['gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:32:06 | INFO | model_predictor:predict:118 - 【预测诊断】最终特征列数=27
+2026-01-14 14:32:06 | INFO | model_predictor:predict:119 - 【预测诊断】最终特征列名=['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:32:06 | INFO | model_predictor:predict:121 - 【预测诊断】最终特征首行={'working_face': 15080, 'work_stage': '回采', 'roadway': 'mining', 'roadway_id': 11, 'borehole_id': '1.0', 'distance_from_entrance': 277.9, 'x_coord': 36562.4575320839, 'y_coord': 49664.9947291619, 'z_coord': -653.713920506622, 'coal_thickness': 3.2, 'regional_measure_strength': 16.5, 'drilling_depth': 2.0, 'distance_to_face': 2.0, 'face_advance_distance': 277.9, 'workface_id': 1, 'fault_influence_strength': 0.5, 'days_since_start': 71.0, 'days_in_workface': 71.0, 'distance_time_interaction': 0.142, 'advance_rate': 0.0, 'distance_to_face_bucket': 2.0, 'drilling_cuttings_s_historical_mean': 0.0, 'drilling_cuttings_s_trend': 0.0, 'gas_emission_velocity_q_historical_mean': 0.0, 'gas_emission_velocity_q_trend': 0.0, 'gas_emission_velocity_q_rolling_mean': 0, 'gas_emission_velocity_q_hist_fused': 0}
+2026-01-14 14:32:06 | INFO | model_predictor:predict:158 - 预测完成，共 1 条样本
+2026-01-14 14:32:06 | INFO | config_utils:wrapper:33 - 【耗时统计】predict 执行完成，耗时 0.05 秒
+2026-01-14 14:32:06 | INFO | performance_monitor:_start_background_monitoring:68 - 性能监控后台线程已启动
+2026-01-14 14:32:06 | INFO | __main__:predict:568 - 瓦斯指标预测完成，成功预测1条样本

@@ -1,0 +1,1098 @@
+2026-01-14 14:21:22 | INFO | setup_logging:setup_logging:124 - 日志系统初始化完成，日志文件路径：logs\20260114.log，保留备份：10天，log_level=INFO，verbose_console=True，brief_training_logs=False
+2026-01-14 14:21:22 | WARNING | db_utils:__init__:37 - [诊断] 正在加载 DBUtils 文件：E:\coal-mine-prediction-service\db_utils.py
+2026-01-14 14:21:22 | INFO | coal_mine_model:__init__:48 - 成功加载配置文件：config.ini
+2026-01-14 14:21:22 | INFO | regional_measure_calculator:_load_regional_measure_config:34 - 区域措施强度配置加载完成：默认煤密度=1.4t/m³，最小煤量阈值=0.001t
+2026-01-14 14:21:22 | INFO | model_trainer:__init__:45 - 模型训练器初始化完成，使用算法: lightgbm
+2026-01-14 14:21:22 | WARNING | db_utils:__init__:37 - [诊断] 正在加载 DBUtils 文件：E:\coal-mine-prediction-service\db_utils.py
+2026-01-14 14:21:22 | INFO | coal_mine_model:__init__:86 - 跨进程锁初始化完成，锁文件路径：models\model.lock
+2026-01-14 14:21:22 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：0
+2026-01-14 14:21:22 | INFO | coal_mine_model:__init__:112 - 当前配置文件：config.ini
+2026-01-14 14:21:22 | INFO | __main__:<module>:43 - Flask应用初始化完成，模型状态：未训练
+2026-01-14 14:21:22 | INFO | source_prediction:_load_source_prediction_params:31 - 分源预测法配置加载完成
+2026-01-14 14:21:22 | INFO | __main__:<module>:1214 - 启动煤矿瓦斯风险预测服务
+2026-01-14 14:21:22 | INFO | __main__:<module>:1215 - 服务地址：0.0.0.0:5000
+2026-01-14 14:21:22 | INFO | __main__:<module>:1216 - 调试模式：关闭
+2026-01-14 14:21:35 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:21:35 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:21:35 | INFO | __main__:train_model:347 - 训练标签校验通过：total=342, valid_labels=342
+2026-01-14 14:21:35 | INFO | __main__:train_model:353 - 训练标签校验通过：total=342, valid_labels=342, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 342, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 342, 'missing_ratio': 0.0}}
+2026-01-14 14:21:35 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:21:35 | INFO | __main__:train_model:375 -  工作面 '15080': 342条记录，日期范围: 2025-08-13 到 2025-08-15
+2026-01-14 14:21:35 | INFO | __main__:train_model:402 - 计算342条样本的断层影响系数
+2026-01-14 14:21:35 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:21:35 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:21:36 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：342，有效计算：342，平均值：0.5，最大值：0.55
+2026-01-14 14:21:36 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：342
+2026-01-14 14:21:36 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '1.0', 'coal_thickness': 3.1, 'distance_from_entrance': 105.5, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.0, 'drilling_depth': 2.0, 'face_advance_distance': 105.5, 'gas_emission_velocity_q': 0.35, 'measurement_date': '2025-08-13', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36604.0468137606, 'y_coord': 49489.3406847466, 'z_coord': -657.66676577215, 'fault_influence_strength': 0.5}
+2026-01-14 14:21:36 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:21:36 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=0，batch=342，epochs=3
+2026-01-14 14:21:36 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 342
+2026-01-14 14:21:37 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 0 条 seed 行
+2026-01-14 14:21:38 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:21:38 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:21:38 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:21:38 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:21:38 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:21:38 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:21:38 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:21:38 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=55.26%
+2026-01-14 14:21:38 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (342, 36)
+2026-01-14 14:21:38 | INFO | coal_mine_model:train:548 - DataFrame列名: ['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', 'measurement_date_parsed', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'spatiotemporal_group', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:21:38 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:21:38 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:21:38 | INFO | coal_mine_model:train:575 - 自动配置切换：初次大量数据训练 → config_phase1.ini
+2026-01-14 14:21:38 | INFO | coal_mine_model:reload_config:139 - 开始动态重载系统配置
+2026-01-14 14:21:38 | INFO | coal_mine_model:reload_config:164 - 切换到新配置文件: config_phase1.ini
+2026-01-14 14:21:38 | INFO | regional_measure_calculator:_load_regional_measure_config:34 - 区域措施强度配置加载完成：默认煤密度=1.4t/m³，最小煤量阈值=0.001t
+2026-01-14 14:21:38 | INFO | model_trainer:__init__:45 - 模型训练器初始化完成，使用算法: lightgbm
+2026-01-14 14:21:38 | INFO | coal_mine_model:reload_config:229 - 增量训练窗口参数加载完成：lookback_days=14, window_limit=5000
+2026-01-14 14:21:38 | INFO | coal_mine_model:reload_config:242 - 跳过数据库配置重载（使用现有连接）
+2026-01-14 14:21:38 | INFO | coal_mine_model:reload_config:266 - 配置动态重载完成，所有模块已更新
+2026-01-14 14:21:38 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:21:38 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:21:38 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:21:38 | INFO | coal_mine_model:train:797 - 事务中插入 342 条训练数据（未提交）
+2026-01-14 14:21:38 | INFO | coal_mine_model:train:898 - 构建训练集: X形状=(342, 27), y形状=(342, 2)
+2026-01-14 14:21:38 | INFO | model_trainer:_full_train:164 - 全量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 预期树数量: 120
+2026-01-14 14:21:38 | INFO | model_trainer:_full_train:226 - 全量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 训练RMSE: 0.1367, 验证RMSE: 0.1322, 预期树数量: 120, 实际树数量: 120
+2026-01-14 14:21:38 | INFO | model_trainer:_full_train:164 - 全量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 预期树数量: 120
+2026-01-14 14:21:38 | INFO | model_trainer:_full_train:226 - 全量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 训练RMSE: 0.1801, 验证RMSE: 0.2719, 预期树数量: 120, 实际树数量: 120
+2026-01-14 14:21:38 | INFO | coal_mine_model:train:926 - 事务提交成功，342 条数据已持久化
+2026-01-14 14:21:38 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：342
+2026-01-14 14:21:38 | WARNING | model_evaluator:evaluate_model:226 - time_holdout降级：日期跨度过短 span_days=2, uniq_dates=2，holdout_days=3。将回退为 latest + (可选)group去重
+2026-01-14 14:21:38 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:21:38 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:21:38 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:21:38 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:21:38 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=23.5%
+2026-01-14 14:21:38 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=23.5%
+2026-01-14 14:21:38 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=23.5%
+2026-01-14 14:21:38 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=100.0%
+2026-01-14 14:21:38 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=100.0%
+2026-01-14 14:21:38 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=100.0%
+2026-01-14 14:21:38 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=100.0%
+2026-01-14 14:21:38 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=23.5%
+2026-01-14 14:21:38 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=31.5%
+2026-01-14 14:21:38 | WARNING | model_evaluator:evaluate_model:472 - 评估输入不可信（增强特征未有效生成/大量被补0），本次评估标记为 evaluation_invalid；原因：关键增强特征近乎全0（>=95%）的列数=4：['drilling_cuttings_s_historical_mean', 'gas_emission_velocity_q_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_trend']
+2026-01-14 14:21:38 | INFO | coal_mine_model:train:1007 - 跳过性能回滚检查: 评估失败/未成功, 评估输入不可信(evaluation_invalid), 无RMSE数据, 无基线数据
+2026-01-14 14:21:38 | WARNING | coal_mine_model:train:1024 - 本次评估为 evaluation_invalid：跳过基线更新（需先修复增强特征生成闭环）
+2026-01-14 14:21:38 | INFO | model_manager:save_candidate_model:132 - 候选模型已保存：models\candidates\20260114_142138_warning
+2026-01-14 14:21:38 | INFO | coal_mine_model:train:1115 - 本轮不发布：publish_action=skipped
+2026-01-14 14:21:38 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 无评估数据
+2026-01-14 14:21:38 | INFO | performance_monitor:_start_background_monitoring:68 - 性能监控后台线程已启动
+2026-01-14 14:21:38 | INFO | __main__:train_model:467 - 模型训练完成，状态：partial_success，模式：首次训练，新增样本：342
+2026-01-14 14:21:48 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:21:48 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:21:48 | INFO | __main__:train_model:347 - 训练标签校验通过：total=513, valid_labels=513
+2026-01-14 14:21:48 | INFO | __main__:train_model:353 - 训练标签校验通过：total=513, valid_labels=513, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 513, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 513, 'missing_ratio': 0.0}}
+2026-01-14 14:21:48 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:21:48 | INFO | __main__:train_model:375 -  工作面 '15080': 513条记录，日期范围: 2025-08-17 到 2025-08-19
+2026-01-14 14:21:48 | INFO | __main__:train_model:386 - 发现108个坐标点有重复测量
+2026-01-14 14:21:48 | INFO | __main__:train_model:402 - 计算513条样本的断层影响系数
+2026-01-14 14:21:48 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:21:48 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:21:49 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：513，有效计算：513，平均值：0.51，最大值：1.06
+2026-01-14 14:21:49 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：513
+2026-01-14 14:21:49 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '1.0', 'coal_thickness': 3.0, 'distance_from_entrance': 117.2, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.0, 'drilling_depth': 2.0, 'face_advance_distance': 117.2, 'gas_emission_velocity_q': 0.21, 'measurement_date': '2025-08-17', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36601.3741942708, 'y_coord': 49500.6286032591, 'z_coord': -657.522550266755, 'fault_influence_strength': 0.5}
+2026-01-14 14:21:49 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:21:49 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=342，batch=513，epochs=3
+2026-01-14 14:21:49 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 513
+2026-01-14 14:21:51 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 405 条 seed 行
+2026-01-14 14:21:51 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:21:51 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:21:51 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:21:51 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:21:51 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=14.04%
+2026-01-14 14:21:51 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=18.13%
+2026-01-14 14:21:51 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:21:51 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=36.84%
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (513, 37)
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:21:51 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:797 - 事务中插入 513 条训练数据（未提交）
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:898 - 构建训练集: X形状=(513, 27), y形状=(513, 2)
+2026-01-14 14:21:51 | INFO | model_trainer:_full_train:164 - 全量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 预期树数量: 120
+2026-01-14 14:21:51 | INFO | model_trainer:_full_train:226 - 全量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 训练RMSE: 0.1618, 验证RMSE: 0.1049, 预期树数量: 120, 实际树数量: 120
+2026-01-14 14:21:51 | INFO | model_trainer:_full_train:164 - 全量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 预期树数量: 120
+2026-01-14 14:21:51 | INFO | model_trainer:_full_train:226 - 全量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 训练RMSE: 0.1036, 验证RMSE: 0.0718, 预期树数量: 120, 实际树数量: 120
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:926 - 事务提交成功，513 条数据已持久化
+2026-01-14 14:21:51 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：855
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：513 → 513（cutoff=2025-08-16）
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-08-19, cutoff=2025-08-16，span_days=4, uniq_dates=3
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=31.0%
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=42.0%
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:21:51 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=3.3%
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:961 - 设置初始性能基线: 0.1236
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:979 - 训练数据: 513条, 当前RMSE: 0.1236
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.1236, 下降比例: 0.00%
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:1020 - 保持性能基线不变：baseline=0.1236 当前=0.1236
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:1071 - 线上尚无已发布模型：首个可信评估模型将直接发布（建立生产起点）
+2026-01-14 14:21:51 | INFO | model_manager:save_model:86 - 模型备份完成，备份目录：models\backup\20260114_142151，算法类型：lightgbm
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:1091 - 发布成功：publish_action=published
+2026-01-14 14:21:51 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.1236
+2026-01-14 14:21:51 | INFO | __main__:train_model:467 - 模型训练完成，状态：success，模式：全量训练（模型未就绪/未发布），新增样本：513
+2026-01-14 14:22:01 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:22:01 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:22:01 | INFO | __main__:train_model:347 - 训练标签校验通过：total=396, valid_labels=396
+2026-01-14 14:22:01 | INFO | __main__:train_model:353 - 训练标签校验通过：total=396, valid_labels=396, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 396, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 396, 'missing_ratio': 0.0}}
+2026-01-14 14:22:01 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:22:01 | INFO | __main__:train_model:375 -  工作面 '15080': 396条记录，日期范围: 2025-08-21 到 2025-08-23
+2026-01-14 14:22:01 | INFO | __main__:train_model:386 - 发现81个坐标点有重复测量
+2026-01-14 14:22:01 | INFO | __main__:train_model:402 - 计算396条样本的断层影响系数
+2026-01-14 14:22:01 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:22:01 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:22:02 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：396，有效计算：396，平均值：0.52，最大值：1.07
+2026-01-14 14:22:02 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：396
+2026-01-14 14:22:02 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '1.0', 'coal_thickness': 3.1, 'distance_from_entrance': 128.9, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.0, 'drilling_depth': 2.0, 'face_advance_distance': 128.9, 'gas_emission_velocity_q': 0.22, 'measurement_date': '2025-08-21', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36598.816773897, 'y_coord': 49511.4299735598, 'z_coord': -657.383498751763, 'fault_influence_strength': 0.5}
+2026-01-14 14:22:02 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:22:02 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=855，batch=396，epochs=3
+2026-01-14 14:22:02 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 396
+2026-01-14 14:22:04 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 315 条 seed 行
+2026-01-14 14:22:04 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:22:04 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:22:04 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:22:04 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:22:04 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=17.17%
+2026-01-14 14:22:04 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=14.39%
+2026-01-14 14:22:04 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:22:04 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=45.45%
+2026-01-14 14:22:04 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (396, 37)
+2026-01-14 14:22:04 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:22:04 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:22:04 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:22:04 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:22:04 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:22:04 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:22:04 | INFO | coal_mine_model:train:797 - 事务中插入 396 条训练数据（未提交）
+2026-01-14 14:22:04 | INFO | coal_mine_model:train:898 - 构建训练集: X形状=(396, 27), y形状=(396, 2)
+2026-01-14 14:22:04 | INFO | model_trainer:_full_train:164 - 全量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 预期树数量: 120
+2026-01-14 14:22:04 | INFO | model_trainer:_full_train:226 - 全量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 训练RMSE: 0.1650, 验证RMSE: 0.0937, 预期树数量: 120, 实际树数量: 120
+2026-01-14 14:22:04 | INFO | model_trainer:_full_train:164 - 全量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 预期树数量: 120
+2026-01-14 14:22:04 | INFO | model_trainer:_full_train:226 - 全量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 训练RMSE: 0.0972, 验证RMSE: 0.0977, 预期树数量: 120, 实际树数量: 120
+2026-01-14 14:22:04 | INFO | coal_mine_model:train:926 - 事务提交成功，396 条数据已持久化
+2026-01-14 14:22:04 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：1251
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：396 → 396（cutoff=2025-08-20）
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-08-23, cutoff=2025-08-20，span_days=4, uniq_dates=3
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=33.0%
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=28.0%
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=23.5%
+2026-01-14 14:22:04 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=3.8%
+2026-01-14 14:22:04 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:22:04 | INFO | coal_mine_model:train:979 - 训练数据: 396条, 当前RMSE: 0.1446
+2026-01-14 14:22:04 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.1236, 下降比例: 16.99%
+2026-01-14 14:22:04 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:22:04 | INFO | coal_mine_model:train:1020 - 保持性能基线不变：baseline=0.1236 当前=0.1446
+2026-01-14 14:22:04 | INFO | model_manager:save_candidate_model:132 - 候选模型已保存：models\candidates\20260114_142204_success
+2026-01-14 14:22:05 | INFO | model_manager:load_model:256 - 模型加载成功：2个目标lightgbm模型+预处理模型
+2026-01-14 14:22:05 | INFO | coal_mine_model:train:1115 - 本轮不发布：publish_action=kept_previous
+2026-01-14 14:22:05 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.1446
+2026-01-14 14:22:05 | INFO | __main__:train_model:467 - 模型训练完成，状态：partial_success，模式：全量训练（模型未就绪/未发布），新增样本：396
+2026-01-14 14:22:15 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:22:15 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:22:15 | INFO | __main__:train_model:347 - 训练标签校验通过：total=558, valid_labels=558
+2026-01-14 14:22:15 | INFO | __main__:train_model:353 - 训练标签校验通过：total=558, valid_labels=558, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 558, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 558, 'missing_ratio': 0.0}}
+2026-01-14 14:22:15 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:22:15 | INFO | __main__:train_model:375 -  工作面 '15080': 558条记录，日期范围: 2025-08-25 到 2025-08-27
+2026-01-14 14:22:15 | INFO | __main__:train_model:386 - 发现126个坐标点有重复测量
+2026-01-14 14:22:15 | INFO | __main__:train_model:402 - 计算558条样本的断层影响系数
+2026-01-14 14:22:15 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:22:15 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:22:15 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：558，有效计算：558，平均值：0.5，最大值：0.9
+2026-01-14 14:22:15 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：558
+2026-01-14 14:22:15 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '1.0', 'coal_thickness': 3.1, 'distance_from_entrance': 134.9, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.0, 'drilling_depth': 2.0, 'face_advance_distance': 134.9, 'gas_emission_velocity_q': 0.27, 'measurement_date': '2025-08-25', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36597.5495836217, 'y_coord': 49516.782003889, 'z_coord': -657.309897187546, 'fault_influence_strength': 0.5}
+2026-01-14 14:22:15 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:22:15 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=1251，batch=558，epochs=3
+2026-01-14 14:22:15 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 558
+2026-01-14 14:22:18 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 432 条 seed 行
+2026-01-14 14:22:19 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:22:19 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:22:19 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:22:19 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:22:19 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=14.87%
+2026-01-14 14:22:19 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=16.49%
+2026-01-14 14:22:19 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:22:19 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=56.45%
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (558, 37)
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:22:19 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:797 - 事务中插入 558 条训练数据（未提交）
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:874 - 增量训练窗口已生效：lookback_days=14，window_limit=5000，实际训练样本=1809（含当前批次）
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:910 - 构建训练集(增量): X形状=(1809, 27), y形状=(1809, 2)
+2026-01-14 14:22:19 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 当前树数量: 120, 计划追加: 20
+2026-01-14 14:22:19 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 追加树数量: 20, 累计树数量: 140
+2026-01-14 14:22:19 | INFO | model_trainer:_incremental_train:341 - 目标 drilling_cuttings_s → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 140, 训练RMSE: 0.2346
+2026-01-14 14:22:19 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 当前树数量: 120, 计划追加: 20
+2026-01-14 14:22:19 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 追加树数量: 20, 累计树数量: 140
+2026-01-14 14:22:19 | INFO | model_trainer:_incremental_train:341 - 目标 gas_emission_velocity_q → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 140, 训练RMSE: 0.1945
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:926 - 事务提交成功，558 条数据已持久化
+2026-01-14 14:22:19 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：1809
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：558 → 558（cutoff=2025-08-24）
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-08-27, cutoff=2025-08-24，span_days=4, uniq_dates=3
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=13.5%
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=12.0%
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:19 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=1.2%
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:979 - 训练数据: 558条, 当前RMSE: 0.2196
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.1236, 下降比例: 77.67%
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:22:19 | WARNING | coal_mine_model:train:984 - 性能下降过多（77.67%），尝试回滚
+2026-01-14 14:22:19 | WARNING | model_manager:rollback_model:293 - 备份索引 -2 超出范围，共 1 个备份
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:1020 - 保持性能基线不变：baseline=0.1236 当前=0.2196
+2026-01-14 14:22:19 | INFO | model_manager:save_candidate_model:132 - 候选模型已保存：models\candidates\20260114_142219_success
+2026-01-14 14:22:19 | INFO | model_manager:load_model:256 - 模型加载成功：2个目标lightgbm模型+预处理模型
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:1115 - 本轮不发布：publish_action=kept_previous
+2026-01-14 14:22:19 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.2196
+2026-01-14 14:22:19 | INFO | __main__:train_model:467 - 模型训练完成，状态：partial_success，模式：增量训练，新增样本：558
+2026-01-14 14:22:29 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:22:29 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:22:29 | INFO | __main__:train_model:347 - 训练标签校验通过：total=450, valid_labels=450
+2026-01-14 14:22:29 | INFO | __main__:train_model:353 - 训练标签校验通过：total=450, valid_labels=450, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 450, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 450, 'missing_ratio': 0.0}}
+2026-01-14 14:22:29 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:22:29 | INFO | __main__:train_model:375 -  工作面 '15080': 450条记录，日期范围: 2025-08-29 到 2025-08-31
+2026-01-14 14:22:29 | INFO | __main__:train_model:386 - 发现99个坐标点有重复测量
+2026-01-14 14:22:29 | INFO | __main__:train_model:402 - 计算450条样本的断层影响系数
+2026-01-14 14:22:29 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:22:29 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:22:30 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：450，有效计算：450，平均值：0.5，最大值：0.5
+2026-01-14 14:22:30 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：450
+2026-01-14 14:22:30 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '1.0', 'coal_thickness': 3.0, 'distance_from_entrance': 144.1, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.0, 'drilling_depth': 2.0, 'face_advance_distance': 144.1, 'gas_emission_velocity_q': 0.45, 'measurement_date': '2025-08-29', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36595.4897236127, 'y_coord': 49525.4819074922, 'z_coord': -657.187094180539, 'fault_influence_strength': 0.5}
+2026-01-14 14:22:30 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:22:30 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=1809，batch=450，epochs=3
+2026-01-14 14:22:30 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 450
+2026-01-14 14:22:33 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 351 条 seed 行
+2026-01-14 14:22:33 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:22:33 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:22:33 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:22:33 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:22:33 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=18.00%
+2026-01-14 14:22:33 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=14.22%
+2026-01-14 14:22:33 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:22:33 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=64.00%
+2026-01-14 14:22:33 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (450, 37)
+2026-01-14 14:22:33 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:22:33 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:22:33 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:22:33 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:22:33 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:22:33 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:22:33 | INFO | coal_mine_model:train:797 - 事务中插入 450 条训练数据（未提交）
+2026-01-14 14:22:33 | INFO | coal_mine_model:train:874 - 增量训练窗口已生效：lookback_days=14，window_limit=5000，实际训练样本=1917（含当前批次）
+2026-01-14 14:22:33 | INFO | coal_mine_model:train:910 - 构建训练集(增量): X形状=(1917, 27), y形状=(1917, 2)
+2026-01-14 14:22:33 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 当前树数量: 120, 计划追加: 20
+2026-01-14 14:22:33 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 追加树数量: 20, 累计树数量: 140
+2026-01-14 14:22:33 | INFO | model_trainer:_incremental_train:341 - 目标 drilling_cuttings_s → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 140, 训练RMSE: 0.2185
+2026-01-14 14:22:33 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 当前树数量: 120, 计划追加: 20
+2026-01-14 14:22:34 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 追加树数量: 20, 累计树数量: 140
+2026-01-14 14:22:34 | INFO | model_trainer:_incremental_train:341 - 目标 gas_emission_velocity_q → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 140, 训练RMSE: 0.1587
+2026-01-14 14:22:34 | INFO | coal_mine_model:train:926 - 事务提交成功，450 条数据已持久化
+2026-01-14 14:22:34 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：2259
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：450 → 450（cutoff=2025-08-28）
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-08-31, cutoff=2025-08-28，span_days=4, uniq_dates=3
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=6.5%
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=1.0%
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=19.0%
+2026-01-14 14:22:34 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=1.2%
+2026-01-14 14:22:34 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:22:34 | INFO | coal_mine_model:train:979 - 训练数据: 450条, 当前RMSE: 0.1350
+2026-01-14 14:22:34 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.1236, 下降比例: 9.22%
+2026-01-14 14:22:34 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:22:34 | INFO | coal_mine_model:train:1020 - 保持性能基线不变：baseline=0.1236 当前=0.1350
+2026-01-14 14:22:34 | INFO | model_manager:save_candidate_model:132 - 候选模型已保存：models\candidates\20260114_142234_success
+2026-01-14 14:22:34 | INFO | model_manager:load_model:256 - 模型加载成功：2个目标lightgbm模型+预处理模型
+2026-01-14 14:22:34 | INFO | coal_mine_model:train:1115 - 本轮不发布：publish_action=kept_previous
+2026-01-14 14:22:34 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.1350
+2026-01-14 14:22:34 | INFO | __main__:train_model:467 - 模型训练完成，状态：partial_success，模式：增量训练，新增样本：450
+2026-01-14 14:22:44 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:22:44 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:22:44 | INFO | __main__:train_model:347 - 训练标签校验通过：total=486, valid_labels=486
+2026-01-14 14:22:44 | INFO | __main__:train_model:353 - 训练标签校验通过：total=486, valid_labels=486, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 486, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 486, 'missing_ratio': 0.0}}
+2026-01-14 14:22:44 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:22:44 | INFO | __main__:train_model:375 -  工作面 '15080': 486条记录，日期范围: 2025-09-02 到 2025-09-04
+2026-01-14 14:22:44 | INFO | __main__:train_model:402 - 计算486条样本的断层影响系数
+2026-01-14 14:22:44 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:22:44 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:22:44 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：486，有效计算：486，平均值：0.5，最大值：0.5
+2026-01-14 14:22:44 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：486
+2026-01-14 14:22:44 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '1.0', 'coal_thickness': 3.1, 'distance_from_entrance': 153.2, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.0, 'drilling_depth': 2.0, 'face_advance_distance': 153.2, 'gas_emission_velocity_q': 0.29, 'measurement_date': '2025-09-02', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36593.1627014707, 'y_coord': 49535.3101813694, 'z_coord': -657.084370691517, 'fault_influence_strength': 0.5}
+2026-01-14 14:22:44 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:22:44 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=2259，batch=486，epochs=3
+2026-01-14 14:22:44 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 486
+2026-01-14 14:22:48 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 486 条 seed 行
+2026-01-14 14:22:49 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:22:49 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:22:49 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:22:49 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:22:49 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:22:49 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:22:49 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:22:49 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=50.00%
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (486, 37)
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:22:49 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:797 - 事务中插入 486 条训练数据（未提交）
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:874 - 增量训练窗口已生效：lookback_days=14，window_limit=5000，实际训练样本=1890（含当前批次）
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:910 - 构建训练集(增量): X形状=(1890, 27), y形状=(1890, 2)
+2026-01-14 14:22:49 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 当前树数量: 120, 计划追加: 20
+2026-01-14 14:22:49 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 追加树数量: 20, 累计树数量: 140
+2026-01-14 14:22:49 | INFO | model_trainer:_incremental_train:341 - 目标 drilling_cuttings_s → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 140, 训练RMSE: 0.2309
+2026-01-14 14:22:49 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 当前树数量: 120, 计划追加: 20
+2026-01-14 14:22:49 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 追加树数量: 20, 累计树数量: 140
+2026-01-14 14:22:49 | INFO | model_trainer:_incremental_train:341 - 目标 gas_emission_velocity_q → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 140, 训练RMSE: 0.1684
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:926 - 事务提交成功，486 条数据已持久化
+2026-01-14 14:22:49 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：2745
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：486 → 486（cutoff=2025-09-01）
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-09-04, cutoff=2025-09-01，span_days=4, uniq_dates=3
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:22:49 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=0.0%
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:979 - 训练数据: 486条, 当前RMSE: 0.2169
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.1236, 下降比例: 75.49%
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:22:49 | WARNING | coal_mine_model:train:984 - 性能下降过多（75.49%），尝试回滚
+2026-01-14 14:22:49 | WARNING | model_manager:rollback_model:293 - 备份索引 -2 超出范围，共 1 个备份
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:1020 - 保持性能基线不变：baseline=0.1236 当前=0.2169
+2026-01-14 14:22:49 | INFO | model_manager:save_candidate_model:132 - 候选模型已保存：models\candidates\20260114_142249_success
+2026-01-14 14:22:49 | INFO | model_manager:load_model:256 - 模型加载成功：2个目标lightgbm模型+预处理模型
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:1115 - 本轮不发布：publish_action=kept_previous
+2026-01-14 14:22:49 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.2169
+2026-01-14 14:22:49 | INFO | __main__:train_model:467 - 模型训练完成，状态：partial_success，模式：增量训练，新增样本：486
+2026-01-14 14:22:59 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:22:59 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:22:59 | INFO | __main__:train_model:347 - 训练标签校验通过：total=486, valid_labels=486
+2026-01-14 14:22:59 | INFO | __main__:train_model:353 - 训练标签校验通过：total=486, valid_labels=486, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 486, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 486, 'missing_ratio': 0.0}}
+2026-01-14 14:22:59 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:22:59 | INFO | __main__:train_model:375 -  工作面 '15080': 486条记录，日期范围: 2025-09-06 到 2025-09-08
+2026-01-14 14:22:59 | INFO | __main__:train_model:402 - 计算486条样本的断层影响系数
+2026-01-14 14:22:59 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:22:59 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:23:00 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：486，有效计算：486，平均值：0.5，最大值：0.5
+2026-01-14 14:23:00 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：486
+2026-01-14 14:23:00 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '1.0', 'coal_thickness': 3.2, 'distance_from_entrance': 164.6, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.0, 'drilling_depth': 2.0, 'face_advance_distance': 164.6, 'gas_emission_velocity_q': 0.14, 'measurement_date': '2025-09-06', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36590.3748828651, 'y_coord': 49547.0846480937, 'z_coord': -656.95992897067, 'fault_influence_strength': 0.5}
+2026-01-14 14:23:00 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:23:00 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=2745，batch=486，epochs=3
+2026-01-14 14:23:00 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 486
+2026-01-14 14:23:04 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 486 条 seed 行
+2026-01-14 14:23:05 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:23:05 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:05 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:05 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:23:05 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:05 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:05 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:23:05 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=50.00%
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (486, 37)
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:23:05 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:797 - 事务中插入 486 条训练数据（未提交）
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:874 - 增量训练窗口已生效：lookback_days=14，window_limit=5000，实际训练样本=1980（含当前批次）
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:910 - 构建训练集(增量): X形状=(1980, 27), y形状=(1980, 2)
+2026-01-14 14:23:05 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 当前树数量: 120, 计划追加: 20
+2026-01-14 14:23:05 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 追加树数量: 20, 累计树数量: 140
+2026-01-14 14:23:05 | INFO | model_trainer:_incremental_train:341 - 目标 drilling_cuttings_s → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 140, 训练RMSE: 0.2245
+2026-01-14 14:23:05 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 当前树数量: 120, 计划追加: 20
+2026-01-14 14:23:05 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 追加树数量: 20, 累计树数量: 140
+2026-01-14 14:23:05 | INFO | model_trainer:_incremental_train:341 - 目标 gas_emission_velocity_q → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 140, 训练RMSE: 0.1587
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:926 - 事务提交成功，486 条数据已持久化
+2026-01-14 14:23:05 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：3231
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：486 → 486（cutoff=2025-09-05）
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-09-08, cutoff=2025-09-05，span_days=4, uniq_dates=3
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:05 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=0.0%
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:979 - 训练数据: 486条, 当前RMSE: 0.1010
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.1236, 下降比例: -18.28%
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:1018 - 更新性能基线(更优): 0.1010
+2026-01-14 14:23:05 | INFO | model_manager:save_model:86 - 模型备份完成，备份目录：models\backup\20260114_142305，算法类型：lightgbm
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:1091 - 发布成功：publish_action=published
+2026-01-14 14:23:05 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.1010
+2026-01-14 14:23:05 | INFO | __main__:train_model:467 - 模型训练完成，状态：success，模式：增量训练，新增样本：486
+2026-01-14 14:23:15 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:23:15 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:23:15 | INFO | __main__:train_model:347 - 训练标签校验通过：total=486, valid_labels=486
+2026-01-14 14:23:15 | INFO | __main__:train_model:353 - 训练标签校验通过：total=486, valid_labels=486, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 486, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 486, 'missing_ratio': 0.0}}
+2026-01-14 14:23:15 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:23:15 | INFO | __main__:train_model:375 -  工作面 '15080': 486条记录，日期范围: 2025-09-10 到 2025-09-12
+2026-01-14 14:23:15 | INFO | __main__:train_model:402 - 计算486条样本的断层影响系数
+2026-01-14 14:23:15 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:23:15 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:23:16 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：486，有效计算：486，平均值：0.5，最大值：0.5
+2026-01-14 14:23:16 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：486
+2026-01-14 14:23:16 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '1.0', 'coal_thickness': 3.1, 'distance_from_entrance': 176.8, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.0, 'drilling_depth': 2.0, 'face_advance_distance': 176.8, 'gas_emission_velocity_q': 0.27, 'measurement_date': '2025-09-10', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36587.6101040826, 'y_coord': 49558.7618051755, 'z_coord': -656.833705300043, 'fault_influence_strength': 0.5}
+2026-01-14 14:23:16 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:23:16 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=3231，batch=486，epochs=3
+2026-01-14 14:23:16 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 486
+2026-01-14 14:23:21 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 486 条 seed 行
+2026-01-14 14:23:21 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:23:21 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:21 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:21 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:23:21 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:21 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:21 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:23:21 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=50.00%
+2026-01-14 14:23:21 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (486, 37)
+2026-01-14 14:23:21 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:23:21 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:23:21 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:23:21 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:23:21 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:23:21 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:23:21 | INFO | coal_mine_model:train:797 - 事务中插入 486 条训练数据（未提交）
+2026-01-14 14:23:21 | INFO | coal_mine_model:train:874 - 增量训练窗口已生效：lookback_days=21，window_limit=5000，实际训练样本=2682（含当前批次）
+2026-01-14 14:23:22 | INFO | coal_mine_model:train:910 - 构建训练集(增量): X形状=(2682, 27), y形状=(2682, 2)
+2026-01-14 14:23:22 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 当前树数量: 140, 计划追加: 20
+2026-01-14 14:23:22 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 追加树数量: 20, 累计树数量: 160
+2026-01-14 14:23:22 | INFO | model_trainer:_incremental_train:341 - 目标 drilling_cuttings_s → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 160, 训练RMSE: 0.1540
+2026-01-14 14:23:22 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 当前树数量: 140, 计划追加: 20
+2026-01-14 14:23:22 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 追加树数量: 20, 累计树数量: 160
+2026-01-14 14:23:22 | INFO | model_trainer:_incremental_train:341 - 目标 gas_emission_velocity_q → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 160, 训练RMSE: 0.1151
+2026-01-14 14:23:22 | INFO | coal_mine_model:train:926 - 事务提交成功，486 条数据已持久化
+2026-01-14 14:23:22 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：3717
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：486 → 486（cutoff=2025-09-09）
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-09-12, cutoff=2025-09-09，span_days=4, uniq_dates=3
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:22 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=0.0%
+2026-01-14 14:23:22 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:23:22 | INFO | coal_mine_model:train:979 - 训练数据: 486条, 当前RMSE: 0.0745
+2026-01-14 14:23:22 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.1010, 下降比例: -26.24%
+2026-01-14 14:23:22 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:23:22 | INFO | coal_mine_model:train:1018 - 更新性能基线(更优): 0.0745
+2026-01-14 14:23:22 | INFO | model_manager:save_model:86 - 模型备份完成，备份目录：models\backup\20260114_142322，算法类型：lightgbm
+2026-01-14 14:23:22 | INFO | coal_mine_model:train:1091 - 发布成功：publish_action=published
+2026-01-14 14:23:22 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.0745
+2026-01-14 14:23:22 | INFO | __main__:train_model:467 - 模型训练完成，状态：success，模式：增量训练，新增样本：486
+2026-01-14 14:23:32 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:23:32 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:23:32 | INFO | __main__:train_model:347 - 训练标签校验通过：total=486, valid_labels=486
+2026-01-14 14:23:32 | INFO | __main__:train_model:353 - 训练标签校验通过：total=486, valid_labels=486, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 486, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 486, 'missing_ratio': 0.0}}
+2026-01-14 14:23:32 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:23:32 | INFO | __main__:train_model:375 -  工作面 '15080': 486条记录，日期范围: 2025-09-14 到 2025-09-16
+2026-01-14 14:23:32 | INFO | __main__:train_model:386 - 发现9个坐标点有重复测量
+2026-01-14 14:23:32 | INFO | __main__:train_model:402 - 计算486条样本的断层影响系数
+2026-01-14 14:23:32 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:23:32 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:23:33 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：486，有效计算：486，平均值：0.5，最大值：0.5
+2026-01-14 14:23:33 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：486
+2026-01-14 14:23:33 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '1.0', 'coal_thickness': 3.1, 'distance_from_entrance': 188.0, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.0, 'drilling_depth': 2.0, 'face_advance_distance': 188.0, 'gas_emission_velocity_q': 0.14, 'measurement_date': '2025-09-14', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36585.1909226478, 'y_coord': 49568.9793176222, 'z_coord': -656.721609585811, 'fault_influence_strength': 0.5}
+2026-01-14 14:23:33 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:23:33 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=3717，batch=486，epochs=3
+2026-01-14 14:23:33 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 486
+2026-01-14 14:23:37 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 477 条 seed 行
+2026-01-14 14:23:38 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:23:38 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:38 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:38 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:23:38 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=0.82%
+2026-01-14 14:23:38 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:38 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:23:38 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=50.00%
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (486, 37)
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:23:38 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:797 - 事务中插入 486 条训练数据（未提交）
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:874 - 增量训练窗口已生效：lookback_days=21，window_limit=5000，实际训练样本=2637（含当前批次）
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:910 - 构建训练集(增量): X形状=(2637, 27), y形状=(2637, 2)
+2026-01-14 14:23:38 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 当前树数量: 160, 计划追加: 20
+2026-01-14 14:23:38 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 追加树数量: 20, 累计树数量: 180
+2026-01-14 14:23:38 | INFO | model_trainer:_incremental_train:341 - 目标 drilling_cuttings_s → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 180, 训练RMSE: 0.0988
+2026-01-14 14:23:38 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 当前树数量: 160, 计划追加: 20
+2026-01-14 14:23:38 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 追加树数量: 20, 累计树数量: 180
+2026-01-14 14:23:38 | INFO | model_trainer:_incremental_train:341 - 目标 gas_emission_velocity_q → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 180, 训练RMSE: 0.0826
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:926 - 事务提交成功，486 条数据已持久化
+2026-01-14 14:23:38 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：4203
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：486 → 486（cutoff=2025-09-13）
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-09-16, cutoff=2025-09-13，span_days=4, uniq_dates=3
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:38 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=0.0%
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:979 - 训练数据: 486条, 当前RMSE: 0.0823
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.0745, 下降比例: 10.47%
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:1020 - 保持性能基线不变：baseline=0.0745 当前=0.0823
+2026-01-14 14:23:38 | INFO | model_manager:save_candidate_model:132 - 候选模型已保存：models\candidates\20260114_142338_success
+2026-01-14 14:23:38 | INFO | model_manager:load_model:256 - 模型加载成功：2个目标lightgbm模型+预处理模型
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:1115 - 本轮不发布：publish_action=kept_previous
+2026-01-14 14:23:38 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.0823
+2026-01-14 14:23:38 | INFO | __main__:train_model:467 - 模型训练完成，状态：partial_success，模式：增量训练，新增样本：486
+2026-01-14 14:23:48 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:23:48 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:23:48 | INFO | __main__:train_model:347 - 训练标签校验通过：total=468, valid_labels=468
+2026-01-14 14:23:48 | INFO | __main__:train_model:353 - 训练标签校验通过：total=468, valid_labels=468, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 468, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 468, 'missing_ratio': 0.0}}
+2026-01-14 14:23:48 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:23:48 | INFO | __main__:train_model:375 -  工作面 '15080': 468条记录，日期范围: 2025-09-18 到 2025-09-26
+2026-01-14 14:23:48 | INFO | __main__:train_model:402 - 计算468条样本的断层影响系数
+2026-01-14 14:23:48 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:23:48 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:23:49 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：468，有效计算：468，平均值：0.5，最大值：0.5
+2026-01-14 14:23:49 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：468
+2026-01-14 14:23:49 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '1.0', 'coal_thickness': 3.1, 'distance_from_entrance': 197.3, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.0, 'drilling_depth': 2.0, 'face_advance_distance': 197.3, 'gas_emission_velocity_q': 0.35, 'measurement_date': '2025-09-18', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36583.1173385609, 'y_coord': 49577.7371854335, 'z_coord': -656.62589757195, 'fault_influence_strength': 0.5}
+2026-01-14 14:23:49 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:23:49 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=4203，batch=468，epochs=3
+2026-01-14 14:23:49 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 468
+2026-01-14 14:23:54 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 468 条 seed 行
+2026-01-14 14:23:55 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:23:55 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:55 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:55 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:23:55 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:55 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:23:55 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:23:55 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=48.08%
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (468, 37)
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:23:55 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:797 - 事务中插入 468 条训练数据（未提交）
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:874 - 增量训练窗口已生效：lookback_days=21，window_limit=5000，实际训练样本=1926（含当前批次）
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:910 - 构建训练集(增量): X形状=(1926, 27), y形状=(1926, 2)
+2026-01-14 14:23:55 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 当前树数量: 160, 计划追加: 20
+2026-01-14 14:23:55 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 追加树数量: 20, 累计树数量: 180
+2026-01-14 14:23:55 | INFO | model_trainer:_incremental_train:341 - 目标 drilling_cuttings_s → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 180, 训练RMSE: 0.0937
+2026-01-14 14:23:55 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 当前树数量: 160, 计划追加: 20
+2026-01-14 14:23:55 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 追加树数量: 20, 累计树数量: 180
+2026-01-14 14:23:55 | INFO | model_trainer:_incremental_train:341 - 目标 gas_emission_velocity_q → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 180, 训练RMSE: 0.0584
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:926 - 事务提交成功，468 条数据已持久化
+2026-01-14 14:23:55 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：4671
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：243 → 243（cutoff=2025-09-23）
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-09-26, cutoff=2025-09-23，span_days=10, uniq_dates=3
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:23:55 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=0.0%
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:979 - 训练数据: 468条, 当前RMSE: 0.0585
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.0745, 下降比例: -21.48%
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:1018 - 更新性能基线(更优): 0.0585
+2026-01-14 14:23:55 | INFO | model_manager:save_model:86 - 模型备份完成，备份目录：models\backup\20260114_142355，算法类型：lightgbm
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:1091 - 发布成功：publish_action=published
+2026-01-14 14:23:55 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.0585
+2026-01-14 14:23:55 | INFO | __main__:train_model:467 - 模型训练完成，状态：success，模式：增量训练，新增样本：468
+2026-01-14 14:24:05 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:24:05 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:24:05 | INFO | __main__:train_model:347 - 训练标签校验通过：total=486, valid_labels=486
+2026-01-14 14:24:05 | INFO | __main__:train_model:353 - 训练标签校验通过：total=486, valid_labels=486, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 486, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 486, 'missing_ratio': 0.0}}
+2026-01-14 14:24:05 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:24:05 | INFO | __main__:train_model:375 -  工作面 '15080': 486条记录，日期范围: 2025-09-28 到 2025-09-30
+2026-01-14 14:24:05 | INFO | __main__:train_model:402 - 计算486条样本的断层影响系数
+2026-01-14 14:24:05 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:24:05 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:24:06 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：486，有效计算：486，平均值：0.5，最大值：0.5
+2026-01-14 14:24:06 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：486
+2026-01-14 14:24:06 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '1.0', 'coal_thickness': 3.0, 'distance_from_entrance': 222.8, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.0, 'drilling_depth': 2.0, 'face_advance_distance': 222.8, 'gas_emission_velocity_q': 0.22, 'measurement_date': '2025-09-28', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36577.4956217032, 'y_coord': 49601.4807381667, 'z_coord': -656.430181683294, 'fault_influence_strength': 0.5}
+2026-01-14 14:24:06 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:24:06 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=4671，batch=486，epochs=3
+2026-01-14 14:24:06 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 486
+2026-01-14 14:24:11 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 486 条 seed 行
+2026-01-14 14:24:12 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:24:12 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:12 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:12 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:24:12 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:12 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:12 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:24:12 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=50.00%
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (486, 37)
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:24:12 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:797 - 事务中插入 486 条训练数据（未提交）
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:874 - 增量训练窗口已生效：lookback_days=21，window_limit=5000，实际训练样本=1926（含当前批次）
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:910 - 构建训练集(增量): X形状=(1926, 27), y形状=(1926, 2)
+2026-01-14 14:24:12 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 当前树数量: 180, 计划追加: 20
+2026-01-14 14:24:12 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 追加树数量: 20, 累计树数量: 200
+2026-01-14 14:24:12 | INFO | model_trainer:_incremental_train:341 - 目标 drilling_cuttings_s → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 200, 训练RMSE: 0.0740
+2026-01-14 14:24:12 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 当前树数量: 180, 计划追加: 20
+2026-01-14 14:24:12 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 追加树数量: 20, 累计树数量: 200
+2026-01-14 14:24:12 | INFO | model_trainer:_incremental_train:341 - 目标 gas_emission_velocity_q → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 200, 训练RMSE: 0.0539
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:926 - 事务提交成功，486 条数据已持久化
+2026-01-14 14:24:12 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：5157
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：486 → 486（cutoff=2025-09-27）
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-09-30, cutoff=2025-09-27，span_days=4, uniq_dates=3
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:12 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=0.0%
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:979 - 训练数据: 486条, 当前RMSE: 0.0652
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.0585, 下降比例: 11.45%
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:1020 - 保持性能基线不变：baseline=0.0585 当前=0.0652
+2026-01-14 14:24:12 | INFO | model_manager:save_candidate_model:132 - 候选模型已保存：models\candidates\20260114_142412_success
+2026-01-14 14:24:12 | INFO | model_manager:load_model:256 - 模型加载成功：2个目标lightgbm模型+预处理模型
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:1115 - 本轮不发布：publish_action=kept_previous
+2026-01-14 14:24:12 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.0652
+2026-01-14 14:24:12 | INFO | __main__:train_model:467 - 模型训练完成，状态：partial_success，模式：增量训练，新增样本：486
+2026-01-14 14:24:22 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:24:22 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:24:22 | INFO | __main__:train_model:347 - 训练标签校验通过：total=333, valid_labels=333
+2026-01-14 14:24:22 | INFO | __main__:train_model:353 - 训练标签校验通过：total=333, valid_labels=333, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 333, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 333, 'missing_ratio': 0.0}}
+2026-01-14 14:24:22 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:24:22 | INFO | __main__:train_model:375 -  工作面 '15080': 333条记录，日期范围: 2025-10-02 到 2025-10-04
+2026-01-14 14:24:22 | INFO | __main__:train_model:402 - 计算333条样本的断层影响系数
+2026-01-14 14:24:22 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:24:22 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:24:23 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：333，有效计算：333，平均值：0.5，最大值：0.5
+2026-01-14 14:24:23 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：333
+2026-01-14 14:24:23 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '24.0', 'coal_thickness': 3.1, 'distance_from_entrance': 231.2, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.0, 'drilling_depth': 2.0, 'face_advance_distance': 231.2, 'gas_emission_velocity_q': 0.45, 'measurement_date': '2025-10-02', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36340.9054850518, 'y_coord': 49553.5431996848, 'z_coord': -593.335538160647, 'fault_influence_strength': 0.5}
+2026-01-14 14:24:23 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:24:23 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=5157，batch=333，epochs=3
+2026-01-14 14:24:23 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 333
+2026-01-14 14:24:27 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 333 条 seed 行
+2026-01-14 14:24:27 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:24:27 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:27 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:27 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:24:27 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:27 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:27 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:24:27 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=48.65%
+2026-01-14 14:24:27 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (333, 37)
+2026-01-14 14:24:27 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:24:27 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:24:27 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:24:27 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:24:27 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:24:27 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:24:27 | INFO | coal_mine_model:train:797 - 事务中插入 333 条训练数据（未提交）
+2026-01-14 14:24:27 | INFO | coal_mine_model:train:874 - 增量训练窗口已生效：lookback_days=21，window_limit=5000，实际训练样本=1773（含当前批次）
+2026-01-14 14:24:27 | INFO | coal_mine_model:train:910 - 构建训练集(增量): X形状=(1773, 27), y形状=(1773, 2)
+2026-01-14 14:24:27 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 当前树数量: 180, 计划追加: 20
+2026-01-14 14:24:28 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 追加树数量: 20, 累计树数量: 200
+2026-01-14 14:24:28 | INFO | model_trainer:_incremental_train:341 - 目标 drilling_cuttings_s → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 200, 训练RMSE: 0.0821
+2026-01-14 14:24:28 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 当前树数量: 180, 计划追加: 20
+2026-01-14 14:24:28 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 追加树数量: 20, 累计树数量: 200
+2026-01-14 14:24:28 | INFO | model_trainer:_incremental_train:341 - 目标 gas_emission_velocity_q → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 200, 训练RMSE: 0.0586
+2026-01-14 14:24:28 | INFO | coal_mine_model:train:926 - 事务提交成功，333 条数据已持久化
+2026-01-14 14:24:28 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：5490
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：333 → 333（cutoff=2025-10-01）
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-10-04, cutoff=2025-10-01，span_days=6, uniq_dates=4
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=14.5%
+2026-01-14 14:24:28 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=0.7%
+2026-01-14 14:24:28 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:24:28 | INFO | coal_mine_model:train:979 - 训练数据: 333条, 当前RMSE: 0.1054
+2026-01-14 14:24:28 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.0585, 下降比例: 80.17%
+2026-01-14 14:24:28 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:24:28 | WARNING | coal_mine_model:train:984 - 性能下降过多（80.17%），尝试回滚
+2026-01-14 14:24:28 | INFO | model_manager:rollback_model:299 - 回滚到备份：20260114_142305
+2026-01-14 14:24:28 | INFO | model_manager:rollback_model:307 - 恢复文件：preprocessor.pkl
+2026-01-14 14:24:28 | INFO | model_manager:rollback_model:307 - 恢复文件：training_features.pkl
+2026-01-14 14:24:28 | INFO | model_manager:rollback_model:307 - 恢复文件：algorithm.pkl
+2026-01-14 14:24:28 | INFO | model_manager:rollback_model:326 - 恢复模型文件：model_drilling_cuttings_s.txt
+2026-01-14 14:24:28 | INFO | model_manager:rollback_model:326 - 恢复模型文件：model_gas_emission_velocity_q.txt
+2026-01-14 14:24:28 | INFO | model_manager:load_model:256 - 模型加载成功：2个目标lightgbm模型+预处理模型
+2026-01-14 14:24:28 | INFO | model_manager:load_model:256 - 模型加载成功：2个目标lightgbm模型+预处理模型
+2026-01-14 14:24:28 | INFO | coal_mine_model:train:994 - 回滚成功，基线RMSE恢复为：0.0585
+2026-01-14 14:24:28 | INFO | coal_mine_model:train:1020 - 保持性能基线不变：baseline=0.0585 当前=0.1054
+2026-01-14 14:24:28 | INFO | model_manager:save_candidate_model:132 - 候选模型已保存：models\candidates\20260114_142428_success
+2026-01-14 14:24:28 | INFO | model_manager:load_model:256 - 模型加载成功：2个目标lightgbm模型+预处理模型
+2026-01-14 14:24:28 | INFO | coal_mine_model:train:1115 - 本轮不发布：publish_action=kept_previous
+2026-01-14 14:24:28 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.1054
+2026-01-14 14:24:28 | INFO | __main__:train_model:467 - 模型训练完成，状态：partial_success，模式：增量训练，新增样本：333
+2026-01-14 14:24:38 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:24:38 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:24:38 | INFO | __main__:train_model:347 - 训练标签校验通过：total=324, valid_labels=324
+2026-01-14 14:24:38 | INFO | __main__:train_model:353 - 训练标签校验通过：total=324, valid_labels=324, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 324, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 324, 'missing_ratio': 0.0}}
+2026-01-14 14:24:38 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:24:38 | INFO | __main__:train_model:375 -  工作面 '15080': 324条记录，日期范围: 2025-10-06 到 2025-10-09
+2026-01-14 14:24:38 | INFO | __main__:train_model:402 - 计算324条样本的断层影响系数
+2026-01-14 14:24:38 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:24:38 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:24:38 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：324，有效计算：324，平均值：0.5，最大值：0.5
+2026-01-14 14:24:38 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：324
+2026-01-14 14:24:38 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '1.0', 'coal_thickness': 3.0, 'distance_from_entrance': 241.0, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.2, 'drilling_depth': 2.0, 'face_advance_distance': 241.0, 'gas_emission_velocity_q': 0.26, 'measurement_date': '2025-10-06', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36573.3092888052, 'y_coord': 49619.1618876155, 'z_coord': -656.40114028391, 'fault_influence_strength': 0.5}
+2026-01-14 14:24:38 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:24:38 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=5490，batch=324，epochs=3
+2026-01-14 14:24:38 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 324
+2026-01-14 14:24:42 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 324 条 seed 行
+2026-01-14 14:24:42 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:24:42 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:42 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:42 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:24:42 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=17.59%
+2026-01-14 14:24:42 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:42 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:24:42 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=50.00%
+2026-01-14 14:24:42 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (324, 37)
+2026-01-14 14:24:42 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:24:42 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:24:42 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:24:42 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:24:42 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:24:42 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:24:43 | INFO | coal_mine_model:train:797 - 事务中插入 324 条训练数据（未提交）
+2026-01-14 14:24:43 | INFO | coal_mine_model:train:874 - 增量训练窗口已生效：lookback_days=21，window_limit=5000，实际训练样本=1611（含当前批次）
+2026-01-14 14:24:43 | INFO | coal_mine_model:train:910 - 构建训练集(增量): X形状=(1611, 27), y形状=(1611, 2)
+2026-01-14 14:24:43 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 当前树数量: 140, 计划追加: 20
+2026-01-14 14:24:43 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 追加树数量: 20, 累计树数量: 160
+2026-01-14 14:24:43 | INFO | model_trainer:_incremental_train:341 - 目标 drilling_cuttings_s → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 160, 训练RMSE: 0.0975
+2026-01-14 14:24:43 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 当前树数量: 140, 计划追加: 20
+2026-01-14 14:24:43 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 追加树数量: 20, 累计树数量: 160
+2026-01-14 14:24:43 | INFO | model_trainer:_incremental_train:341 - 目标 gas_emission_velocity_q → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 160, 训练RMSE: 0.0772
+2026-01-14 14:24:43 | INFO | coal_mine_model:train:926 - 事务提交成功，324 条数据已持久化
+2026-01-14 14:24:43 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：5814
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：324 → 324（cutoff=2025-10-06）
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-10-09, cutoff=2025-10-06，span_days=7, uniq_dates=4
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=16.5%
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=19.0%
+2026-01-14 14:24:43 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=1.6%
+2026-01-14 14:24:43 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:24:43 | INFO | coal_mine_model:train:979 - 训练数据: 324条, 当前RMSE: 0.0829
+2026-01-14 14:24:43 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.0585, 下降比例: 41.71%
+2026-01-14 14:24:43 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:24:43 | INFO | coal_mine_model:train:1020 - 保持性能基线不变：baseline=0.0585 当前=0.0829
+2026-01-14 14:24:43 | INFO | model_manager:save_candidate_model:132 - 候选模型已保存：models\candidates\20260114_142443_success
+2026-01-14 14:24:43 | INFO | model_manager:load_model:256 - 模型加载成功：2个目标lightgbm模型+预处理模型
+2026-01-14 14:24:43 | INFO | coal_mine_model:train:1115 - 本轮不发布：publish_action=kept_previous
+2026-01-14 14:24:43 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.0829
+2026-01-14 14:24:43 | INFO | __main__:train_model:467 - 模型训练完成，状态：partial_success，模式：增量训练，新增样本：324
+2026-01-14 14:24:53 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:24:53 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:24:53 | INFO | __main__:train_model:347 - 训练标签校验通过：total=369, valid_labels=369
+2026-01-14 14:24:53 | INFO | __main__:train_model:353 - 训练标签校验通过：total=369, valid_labels=369, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 369, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 369, 'missing_ratio': 0.0}}
+2026-01-14 14:24:53 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:24:53 | INFO | __main__:train_model:375 -  工作面 '15080': 369条记录，日期范围: 2025-10-11 到 2025-10-13
+2026-01-14 14:24:53 | INFO | __main__:train_model:402 - 计算369条样本的断层影响系数
+2026-01-14 14:24:53 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:24:53 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:24:53 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：369，有效计算：369，平均值：0.5，最大值：0.5
+2026-01-14 14:24:53 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：369
+2026-01-14 14:24:53 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '6.0', 'coal_thickness': 3.3, 'distance_from_entrance': 250.5, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.2, 'drilling_depth': 2.0, 'face_advance_distance': 250.5, 'gas_emission_velocity_q': 0.13, 'measurement_date': '2025-10-11', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36523.5339309766, 'y_coord': 49619.9472832345, 'z_coord': -643.258297009883, 'fault_influence_strength': 0.5}
+2026-01-14 14:24:53 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:24:53 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=5814，batch=369，epochs=3
+2026-01-14 14:24:53 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 369
+2026-01-14 14:24:58 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 369 条 seed 行
+2026-01-14 14:24:59 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:24:59 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:59 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:59 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:24:59 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:59 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:24:59 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:24:59 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=43.90%
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (369, 37)
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:24:59 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:797 - 事务中插入 369 条训练数据（未提交）
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:874 - 增量训练窗口已生效：lookback_days=21，window_limit=5000，实际训练样本=1755（含当前批次）
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:910 - 构建训练集(增量): X形状=(1755, 27), y形状=(1755, 2)
+2026-01-14 14:24:59 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 当前树数量: 140, 计划追加: 20
+2026-01-14 14:24:59 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 追加树数量: 20, 累计树数量: 160
+2026-01-14 14:24:59 | INFO | model_trainer:_incremental_train:341 - 目标 drilling_cuttings_s → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 160, 训练RMSE: 0.0923
+2026-01-14 14:24:59 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 当前树数量: 140, 计划追加: 20
+2026-01-14 14:24:59 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 追加树数量: 20, 累计树数量: 160
+2026-01-14 14:24:59 | INFO | model_trainer:_incremental_train:341 - 目标 gas_emission_velocity_q → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 160, 训练RMSE: 0.0740
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:926 - 事务提交成功，369 条数据已持久化
+2026-01-14 14:24:59 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：6183
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：369 → 369（cutoff=2025-10-10）
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-10-13, cutoff=2025-10-10，span_days=7, uniq_dates=4
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:24:59 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=0.0%
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:979 - 训练数据: 369条, 当前RMSE: 0.0562
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.0585, 下降比例: -3.93%
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:1018 - 更新性能基线(更优): 0.0562
+2026-01-14 14:24:59 | INFO | model_manager:save_model:86 - 模型备份完成，备份目录：models\backup\20260114_142459，算法类型：lightgbm
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:1091 - 发布成功：publish_action=published
+2026-01-14 14:24:59 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.0562
+2026-01-14 14:24:59 | INFO | __main__:train_model:467 - 模型训练完成，状态：success，模式：增量训练，新增样本：369
+2026-01-14 14:25:09 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:25:09 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:25:09 | INFO | __main__:train_model:347 - 训练标签校验通过：total=414, valid_labels=414
+2026-01-14 14:25:09 | INFO | __main__:train_model:353 - 训练标签校验通过：total=414, valid_labels=414, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 414, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 414, 'missing_ratio': 0.0}}
+2026-01-14 14:25:09 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:25:09 | INFO | __main__:train_model:375 -  工作面 '15080': 414条记录，日期范围: 2025-10-15 到 2025-10-17
+2026-01-14 14:25:09 | INFO | __main__:train_model:402 - 计算414条样本的断层影响系数
+2026-01-14 14:25:09 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:25:09 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:25:10 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：414，有效计算：414，平均值：0.5，最大值：0.5
+2026-01-14 14:25:10 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：414
+2026-01-14 14:25:10 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '1.0', 'coal_thickness': 3.0, 'distance_from_entrance': 259.6, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.0, 'drilling_depth': 2.0, 'face_advance_distance': 259.6, 'gas_emission_velocity_q': 0.35, 'measurement_date': '2025-10-15', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36567.5262931851, 'y_coord': 49643.5866078451, 'z_coord': -654.967397899355, 'fault_influence_strength': 0.5}
+2026-01-14 14:25:10 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:25:10 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=6183，batch=414，epochs=3
+2026-01-14 14:25:10 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 414
+2026-01-14 14:25:15 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 414 条 seed 行
+2026-01-14 14:25:16 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:25:16 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:25:16 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:25:16 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:25:16 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:25:16 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:25:16 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:25:16 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=50.00%
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (414, 37)
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:25:16 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:797 - 事务中插入 414 条训练数据（未提交）
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:874 - 增量训练窗口已生效：lookback_days=21，window_limit=5000，实际训练样本=2169（含当前批次）
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:910 - 构建训练集(增量): X形状=(2169, 27), y形状=(2169, 2)
+2026-01-14 14:25:16 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 当前树数量: 160, 计划追加: 20
+2026-01-14 14:25:16 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 追加树数量: 20, 累计树数量: 180
+2026-01-14 14:25:16 | INFO | model_trainer:_incremental_train:341 - 目标 drilling_cuttings_s → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 180, 训练RMSE: 0.0779
+2026-01-14 14:25:16 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 当前树数量: 160, 计划追加: 20
+2026-01-14 14:25:16 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 追加树数量: 20, 累计树数量: 180
+2026-01-14 14:25:16 | INFO | model_trainer:_incremental_train:341 - 目标 gas_emission_velocity_q → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 180, 训练RMSE: 0.0627
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:926 - 事务提交成功，414 条数据已持久化
+2026-01-14 14:25:16 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：6597
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：414 → 414（cutoff=2025-10-14）
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-10-17, cutoff=2025-10-14，span_days=4, uniq_dates=3
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:16 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=0.0%
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:979 - 训练数据: 414条, 当前RMSE: 0.0605
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.0562, 下降比例: 7.65%
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:1020 - 保持性能基线不变：baseline=0.0562 当前=0.0605
+2026-01-14 14:25:16 | INFO | model_manager:save_candidate_model:132 - 候选模型已保存：models\candidates\20260114_142516_success
+2026-01-14 14:25:16 | INFO | model_manager:load_model:256 - 模型加载成功：2个目标lightgbm模型+预处理模型
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:1115 - 本轮不发布：publish_action=kept_previous
+2026-01-14 14:25:16 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.0605
+2026-01-14 14:25:16 | INFO | __main__:train_model:467 - 模型训练完成，状态：partial_success，模式：增量训练，新增样本：414
+2026-01-14 14:25:26 | INFO | __main__:train_model:187 - 接收到【模型训练】请求（时空增强版）
+2026-01-14 14:25:26 | INFO | __main__:train_model:230 - 检查时空数据完整性
+2026-01-14 14:25:26 | INFO | __main__:train_model:347 - 训练标签校验通过：total=405, valid_labels=405
+2026-01-14 14:25:26 | INFO | __main__:train_model:353 - 训练标签校验通过：total=405, valid_labels=405, threshold=0.1, missing_stats={'drilling_cuttings_s': {'missing_count': 0, 'total_count': 405, 'missing_ratio': 0.0}, 'gas_emission_velocity_q': {'missing_count': 0, 'total_count': 405, 'missing_ratio': 0.0}}
+2026-01-14 14:25:26 | INFO | __main__:train_model:360 - 时空数据统计:
+2026-01-14 14:25:26 | INFO | __main__:train_model:375 -  工作面 '15080': 405条记录，日期范围: 2025-10-19 到 2025-10-21
+2026-01-14 14:25:26 | INFO | __main__:train_model:402 - 计算405条样本的断层影响系数
+2026-01-14 14:25:26 | INFO | fault_calculator:calculate_fault_influence_strength:63 - 自动计算断层影响系数
+2026-01-14 14:25:26 | WARNING | fault_calculator:_get_faults_and_points:195 - 断层13（FF102）无效：组成点0个（需≥2个），已过滤
+2026-01-14 14:25:27 | INFO | fault_calculator:calculate_fault_influence_strength:153 - 断层影响系数计算完成：样本数：405，有效计算：405，平均值：0.5，最大值：0.5
+2026-01-14 14:25:27 | INFO | __main__:train_model:404 - 断层影响系数计算完成，有效样本数：405
+2026-01-14 14:25:27 | INFO | __main__:train_model:411 - 断层计算后数据示例（第一条）：{'borehole_id': '1.0', 'coal_thickness': 3.3, 'distance_from_entrance': 269.0, 'distance_to_face': 2.0, 'drilling_cuttings_s': 2.0, 'drilling_depth': 2.0, 'face_advance_distance': 269.0, 'gas_emission_velocity_q': 0.14, 'measurement_date': '2025-10-19', 'regional_measure_strength': 16.5, 'roadway': 'mining', 'roadway_id': 11, 'work_stage': '回采', 'workface_id': 1, 'working_face': 15080, 'x_coord': 36565.1071117505, 'y_coord': 49653.8041202917, 'z_coord': -654.370210679987, 'fault_influence_strength': 0.5}
+2026-01-14 14:25:27 | INFO | __main__:train_model:412 - 断层计算后数据字段：['borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_cuttings_s', 'drilling_depth', 'face_advance_distance', 'gas_emission_velocity_q', 'measurement_date', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'workface_id', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength']
+2026-01-14 14:25:27 | INFO | __main__:train_model:415 - 开始模型训练：initial_total=6597，batch=405，epochs=3
+2026-01-14 14:25:27 | INFO | coal_mine_model:train:538 - 开始数据预处理，输入数据样本数: 405
+2026-01-14 14:25:33 | INFO | data_preprocessor:_generate_spatiotemporal_features:667 - 训练阶段历史种子接续完成：注入 405 条 seed 行
+2026-01-14 14:25:33 | INFO | data_preprocessor:_log_data_quality_summary:1017 - 【数据质量概览】增强特征缺失/为0比例：
+2026-01-14 14:25:33 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:25:33 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_historical_mean: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:25:33 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_historical_mean: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:25:33 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - drilling_cuttings_s_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:25:33 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_velocity_q_trend: NaN占比=0.00%, 0占比=0.00%
+2026-01-14 14:25:33 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - gas_emission_q_trend: NaN占比=0.00%, 0占比=100.00%
+2026-01-14 14:25:33 | INFO | data_preprocessor:_log_data_quality_summary:1025 -   - advance_rate: NaN占比=0.00%, 0占比=51.11%
+2026-01-14 14:25:33 | INFO | coal_mine_model:train:542 - 数据预处理完成，DataFrame形状: (405, 37)
+2026-01-14 14:25:33 | INFO | coal_mine_model:train:548 - DataFrame列名: ['workface_id', 'spatiotemporal_group', 'measurement_date', 'drilling_cuttings_s', 'gas_emission_velocity_q', 'gas_emission_q', 'measurement_date_parsed', 'borehole_id', 'coal_thickness', 'distance_from_entrance', 'distance_to_face', 'drilling_depth', 'face_advance_distance', 'regional_measure_strength', 'roadway', 'roadway_id', 'work_stage', 'working_face', 'x_coord', 'y_coord', 'z_coord', 'fault_influence_strength', '_spatiotemporal_id', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'coord_hash', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:25:33 | INFO | coal_mine_model:train:549 - 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:25:33 | INFO | coal_mine_model:train:550 - 目标特征: ['drilling_cuttings_s', 'gas_emission_velocity_q']
+2026-01-14 14:25:33 | INFO | coal_mine_model:train:591 - [配置切换后] 训练特征: ['working_face', 'work_stage', 'roadway', 'roadway_id', 'borehole_id', 'distance_from_entrance', 'x_coord', 'y_coord', 'z_coord', 'coal_thickness', 'regional_measure_strength', 'drilling_depth', 'distance_to_face', 'face_advance_distance', 'workface_id', 'gas_emission_q', 'fault_influence_strength', 'days_since_start', 'days_in_workface', 'distance_time_interaction', 'advance_rate', 'distance_to_face_bucket', 'gas_emission_q_historical_mean', 'gas_emission_q_trend', 'drilling_cuttings_s_historical_mean', 'drilling_cuttings_s_trend', 'gas_emission_velocity_q_historical_mean', 'gas_emission_velocity_q_trend', 'gas_emission_velocity_q_rolling_mean', 'gas_emission_velocity_q_hist_fused']
+2026-01-14 14:25:33 | WARNING | coal_mine_model:train:611 - training_features 中发现 gas_emission_q 相关列，已剔除：['gas_emission_q', 'gas_emission_q_historical_mean', 'gas_emission_q_trend']
+2026-01-14 14:25:33 | INFO | coal_mine_model:train:786 - 数据库事务已开启，准备保存训练数据
+2026-01-14 14:25:33 | INFO | coal_mine_model:train:797 - 事务中插入 405 条训练数据（未提交）
+2026-01-14 14:25:33 | INFO | coal_mine_model:train:874 - 增量训练窗口已生效：lookback_days=21，window_limit=5000，实际训练样本=2088（含当前批次）
+2026-01-14 14:25:33 | INFO | coal_mine_model:train:910 - 构建训练集(增量): X形状=(2088, 27), y形状=(2088, 2)
+2026-01-14 14:25:33 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: drilling_cuttings_s, 当前树数量: 160, 计划追加: 20
+2026-01-14 14:25:33 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: drilling_cuttings_s, 追加树数量: 20, 累计树数量: 180
+2026-01-14 14:25:33 | INFO | model_trainer:_incremental_train:341 - 目标 drilling_cuttings_s → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 180, 训练RMSE: 0.0805
+2026-01-14 14:25:33 | INFO | model_trainer:_incremental_train:276 - 增量训练开始 → 算法: lightgbm, 目标: gas_emission_velocity_q, 当前树数量: 160, 计划追加: 20
+2026-01-14 14:25:33 | INFO | model_trainer:_incremental_train:320 - 增量训练完成 → 算法: lightgbm, 目标: gas_emission_velocity_q, 追加树数量: 20, 累计树数量: 180
+2026-01-14 14:25:33 | INFO | model_trainer:_incremental_train:341 - 目标 gas_emission_velocity_q → 训练模式: 增量训练, 追加树数量: 20, 累计树数量: 180, 训练RMSE: 0.0640
+2026-01-14 14:25:33 | INFO | coal_mine_model:train:926 - 事务提交成功，405 条数据已持久化
+2026-01-14 14:25:33 | INFO | model_manager:get_total_samples_from_db:352 - 从数据库查询累计样本数：7002
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:250 - time_holdout+group_holdout启用：group_key=spatiotemporal_group，过滤训练期重复group：405 → 405（cutoff=2025-10-18）
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:278 - time_holdout评估集启用：holdout_days=3，实际评估样本数=200，max_date=2025-10-21, cutoff=2025-10-18，span_days=4, uniq_dates=3
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:381 - === 评估输入增强特征缺失诊断（来自t_feature_cache） ===
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:383 -   - coord_hash: 缺失=0.0%
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:383 -   - spatiotemporal_group: 缺失=0.0%
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:383 -   - distance_to_face_bucket: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:383 -   - days_since_start: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:383 -   - days_in_workface: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:383 -   - distance_time_interaction: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_historical_mean: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:383 -   - drilling_cuttings_s_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:383 -   - gas_emission_velocity_q_trend: 缺失=0.0%, 为0=0.0%
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:383 -   - advance_rate: 缺失=0.0%, 为0=1.0%
+2026-01-14 14:25:33 | INFO | model_evaluator:evaluate_model:395 - === 评估输入总体概览（仅数值列，n=22） === 平均缺失率=0.0%，平均为0率=0.0%
+2026-01-14 14:25:34 | INFO | coal_mine_model:train:978 - === 性能检查诊断 ===
+2026-01-14 14:25:34 | INFO | coal_mine_model:train:979 - 训练数据: 405条, 当前RMSE: 0.0634
+2026-01-14 14:25:34 | INFO | coal_mine_model:train:980 - 基线RMSE: 0.0562, 下降比例: 12.81%
+2026-01-14 14:25:34 | INFO | coal_mine_model:train:981 - 阈值: 60.00%
+2026-01-14 14:25:34 | INFO | coal_mine_model:train:1020 - 保持性能基线不变：baseline=0.0562 当前=0.0634
+2026-01-14 14:25:34 | INFO | model_manager:save_candidate_model:132 - 候选模型已保存：models\candidates\20260114_142534_success
+2026-01-14 14:25:34 | INFO | model_manager:load_model:256 - 模型加载成功：2个目标lightgbm模型+预处理模型
+2026-01-14 14:25:34 | INFO | coal_mine_model:train:1115 - 本轮不发布：publish_action=kept_previous
+2026-01-14 14:25:34 | INFO | coal_mine_model:train:1188 - 训练后评估RMSE: 0.0634
+2026-01-14 14:25:34 | INFO | __main__:train_model:467 - 模型训练完成，状态：partial_success，模式：增量训练，新增样本：405

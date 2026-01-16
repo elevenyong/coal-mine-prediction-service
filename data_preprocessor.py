@@ -985,10 +985,29 @@ class DataPreprocessor(ConfigUtils):
         if df is None or len(df) == 0:
             return df
         try:
+            # 关键修复：
+            # - 预测输入来自 JSON 时，很多“数字列”可能是 object/string（例如 "9.0"）
+            # - sklearn 的数值管道会对 object 调 np.isnan -> 直接报 ufunc isnan 不支持
+            # 因此：优先按配置的 base_numeric 强制转数值，再做 inf/NaN 清洗
+            numeric_candidates = []
+            try:
+                if hasattr(self, "base_numeric") and isinstance(self.base_numeric, list):
+                    numeric_candidates = [c for c in self.base_numeric if c in df.columns]
+            except Exception:
+                numeric_candidates = []
+
+            # 对配置的数值列做强制数值化（即使 dtype 仍是 object 也会被转）
+            if numeric_candidates:
+                for c in numeric_candidates:
+                    try:
+                        df[c] = pd.to_numeric(df[c], errors="coerce")
+                    except Exception:
+                        pass
+
+            # 再补一层：对当前已识别为数值 dtype 的列统一做 inf/NaN 清洗
             num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-            if not num_cols:
-                return df
-            df[num_cols] = df[num_cols].replace([np.inf, -np.inf], np.nan).fillna(0.0)
+            if num_cols:
+                df[num_cols] = df[num_cols].replace([np.inf, -np.inf], np.nan).fillna(0.0)
         except Exception:
             pass
         return df

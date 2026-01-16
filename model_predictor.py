@@ -2,9 +2,10 @@
 煤矿瓦斯风险预测系统 - 模型预测模块
 包含：模型预测、分源预测切换、结果格式化
 """
-from loguru import logger
-import xgboost as xgb
 import numpy as np
+from loguru import logger
+import pandas as pd
+from sklearn.compose import ColumnTransformer
 
 
 from config_utils import timing_decorator
@@ -123,7 +124,114 @@ class ModelPredictor:
                     logger.warning(f"【预测诊断】特征行输出失败（已忽略）：{repr(_e)}")
 
                 # Step 4: 特征预处理+模型预测
-                X_proc = preprocessor.transform(X)
+                # 根治修复：
+                # 训练时 numeric_cols = [所有不在 base_categorical 的列]（见 ModelTrainer.create_preprocessor）
+                # 因此预测时必须把“所有非 base_categorical 列”强制转数值，否则 SimpleImputer 内部会对 object 调 np.isnan 报错。
+                try:
+                    base_cat = []
+                    if hasattr(data_preprocessor, "base_categorical") and isinstance(data_preprocessor.base_categorical,
+                                                                                     list):
+                        base_cat = data_preprocessor.base_categorical
+
+                    # num_candidates：所有不在分类列表里的列，都视为数值列候选
+                    num_candidates = [c for c in X.columns if c not in set(base_cat)]
+
+                    # 诊断：先找出仍为 object 的“数值候选列”
+                    obj_num_cols = [c for c in num_candidates if str(X[c].dtype) == "object"]
+                    if obj_num_cols:
+                        sample_preview = {}
+                        for c in obj_num_cols[:10]:
+                            try:
+                                sample_preview[c] = X[c].dropna().astype(str).head(3).tolist()
+                            except Exception:
+                                sample_preview[c] = []
+                        logger.warning(f"【预测诊断】发现数值候选列为object，将强制to_numeric：{obj_num_cols[:30]}")
+                        logger.warning(f"【预测诊断】object列样例(前10列)：{sample_preview}")
+
+                    # 强制数值化（即使原来是字符串数字，也会转成 float；无法转换的变 NaN）
+                    for c in num_candidates:
+                        try:
+                            X[c] = pd.to_numeric(X[c], errors="coerce")
+                        except Exception:
+                            pass
+
+                    # 统一清洗：inf/-inf -> NaN -> 0
+                    X = X.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+                except Exception as _e:
+                    logger.warning(f"预测前数值强制转换失败（已忽略）：{repr(_e)}")
+
+                # ===== 预测前：强制类型矫正（根治 isnan 报错）=====
+                try:
+                    base_cat = []
+                    if hasattr(data_preprocessor, "base_categorical") and isinstance(data_preprocessor.base_categorical,
+                                                                                     list):
+                        base_cat = data_preprocessor.base_categorical
+
+                    # 1) 分类列统一为字符串（避免被误当数值进入 isnan）
+                    for c in base_cat:
+                        if c in X.columns:
+                            try:
+                                X[c] = X[c].astype(str)
+                            except Exception:
+                                X[c] = X[c].apply(lambda v: "" if v is None else str(v))
+
+                    # 2) 数值候选列：训练时一般是 “所有不在 base_categorical 的列”
+                    num_candidates = [c for c in X.columns if c not in set(base_cat)]
+
+                    # 2.1 datetime/timedelta -> float 时间戳（秒）
+                    for c in num_candidates:
+                        if c not in X.columns:
+                            continue
+                        try:
+                            if pd.api.types.is_datetime64_any_dtype(X[c]) or pd.api.types.is_timedelta64_dtype(X[c]):
+                                X[c] = (X[c].astype("int64") // 1_000_000_000).astype("float64")
+                        except Exception:
+                            # 兜底：变 NaN 后续补 0
+                            X[c] = np.nan
+
+                    # 2.2 其它全部强制 to_numeric（不可转 -> NaN）
+                    for c in num_candidates:
+                        if c not in X.columns:
+                            continue
+                        if pd.api.types.is_numeric_dtype(X[c]):
+                            continue
+                        try:
+                            X[c] = pd.to_numeric(X[c], errors="coerce")
+                        except Exception:
+                            X[c] = np.nan
+
+                    # 统一清洗
+                    X = X.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+                except Exception as e:
+                    # 诊断必须可见：提升到 ERROR
+                    logger.error(f"【预测诊断】类型矫正阶段失败：{repr(e)}")
+
+                # ===== transform 失败时：打印“到底哪列不是数值” + “预处理器 numeric/cat 列定义”=====
+                try:
+                    X_proc = preprocessor.transform(X)
+                except Exception as e:
+                    try:
+                        # 1) 打印所有列 dtype
+                        dtypes_map = {c: str(X[c].dtype) for c in X.columns}
+                        logger.error(f"【预测诊断】transform失败，X列dtype={dtypes_map}")
+                        # 2) 打印首行（避免太大）
+                        if len(X) > 0:
+                            logger.error(f"【预测诊断】transform失败，X首行={X.iloc[0].to_dict()}")
+                        # 3) 如果是 ColumnTransformer，打印 numeric/cat 实际列
+                        if isinstance(preprocessor, ColumnTransformer) and hasattr(preprocessor, "transformers_"):
+                            trans_cols = []
+                            for name, trans, cols in preprocessor.transformers_:
+                                # cols 可能是 list/array/slice
+                                try:
+                                    cols_list = list(cols) if not isinstance(cols, slice) else [
+                                        f"slice({cols.start},{cols.stop},{cols.step})"]
+                                except Exception:
+                                    cols_list = [str(cols)]
+                                trans_cols.append((name, cols_list[:50]))
+                            logger.error(f"【预测诊断】ColumnTransformer列定义={trans_cols}")
+                    except Exception as _e2:
+                        logger.error(f"【预测诊断】transform失败后的诊断输出也失败：{repr(_e2)}")
+                    raise  # 继续抛出，让上层返回原错误信息
                 predictions = {}
 
                 # 关键修复：自动检测算法类型（避免硬编码导致XGBoost预测走错分支）

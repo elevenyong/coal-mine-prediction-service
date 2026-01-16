@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import joblib
+import json
 from loguru import logger
 from datetime import datetime
 import pandas as pd
@@ -22,6 +23,7 @@ class ModelManager:
         self.features_path = os.path.join(self.model_dir, "training_features.pkl")
         self.algorithm_path = os.path.join(self.model_dir, "algorithm.pkl")
         self.lock_file_path = os.path.join(self.model_dir, "model.lock")
+        self.meta_path = os.path.join(self.model_dir, "model_meta.json")
 
     def save_model(self, models, preprocessor, training_features, target_features):
         """
@@ -84,6 +86,25 @@ class ModelManager:
                     shutil.copy(model_path, backup_dir)
 
             logger.info(f"模型备份完成，备份目录：{backup_dir}，算法类型：{algorithm_type}")
+            # 写入线上模型元数据（供预测接口回传使用的模型版本/算法等）
+            try:
+                # 关键：不要覆盖已有 baseline_rmse（否则重启后又变 null）
+                old_meta = self.get_active_model_info() or {}
+                meta = {
+                    "active_version": backup_timestamp,
+                    "algorithm": algorithm_type,
+                    "targets": list((models or {}).keys()),
+                    "saved_at": datetime.now().isoformat(timespec="seconds")
+                }
+                # 继承旧的 baseline 信息（如果已有）
+                if isinstance(old_meta, dict):
+                    if old_meta.get("baseline_rmse") is not None:
+                        meta["baseline_rmse"] = old_meta.get("baseline_rmse")
+                    if old_meta.get("baseline_eval") is not None:
+                        meta["baseline_eval"] = old_meta.get("baseline_eval")
+                self._write_active_meta(meta, backup_dir=backup_dir)
+            except Exception:
+                pass
 
             # 清理旧备份（仅保留最近5份）
             backups = sorted(os.listdir(backup_root))
@@ -95,6 +116,53 @@ class ModelManager:
 
         except Exception as e:
             logger.error(f"保存模型失败：{str(e)}", exc_info=True)
+
+    def _write_active_meta(self, meta: dict, backup_dir: str = None):
+        """写入线上模型元数据（用于预测接口回传模型版本/精度等信息）。"""
+        try:
+            if not isinstance(meta, dict):
+                meta = {}
+            meta.setdefault("updated_at", datetime.now().isoformat(timespec="seconds"))
+            with open(self.meta_path, "w", encoding="utf-8") as f:
+                json.dump(meta, f, ensure_ascii=False, indent=2)
+            if backup_dir:
+                try:
+                    os.makedirs(backup_dir, exist_ok=True)
+                    shutil.copy(self.meta_path, os.path.join(backup_dir, "model_meta.json"))
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"写入model_meta.json失败：{e}")
+
+    def get_active_model_info(self) -> dict:
+        """获取当前线上模型信息（版本/算法/保存时间等）。"""
+        info = {}
+        try:
+            if os.path.exists(self.meta_path):
+                with open(self.meta_path, "r", encoding="utf-8") as f:
+                    info = json.load(f) or {}
+        except Exception as e:
+            logger.debug(f"读取model_meta.json失败：{e}")
+
+        # 兜底：补齐 algorithm / active_version
+        if not info.get("algorithm"):
+            try:
+                if os.path.exists(self.algorithm_path):
+                    info["algorithm"] = joblib.load(self.algorithm_path)
+            except Exception:
+                pass
+
+        if not info.get("active_version"):
+            try:
+                backup_root = os.path.join(self.model_dir, "backup")
+                if os.path.exists(backup_root):
+                    backups = sorted(os.listdir(backup_root), reverse=True)
+                    if backups:
+                        info["active_version"] = backups[0]
+            except Exception:
+                pass
+
+        return info or {}
 
     def save_candidate_model(self, models, preprocessor, training_features, target_features, tag: str = ""):
         """
@@ -324,6 +392,17 @@ class ModelManager:
                     if os.path.exists(src):
                         shutil.copy(src, dst)
                         logger.info(f"恢复模型文件：{model_file}")
+            # 回滚后更新线上模型元数据（active_version 指向目标备份）
+            try:
+                meta = self.get_active_model_info()
+                meta.update({
+                    "active_version": target_backup,
+                    "restored_from_backup": True,
+                    "restored_at": datetime.now().isoformat(timespec="seconds")
+                })
+                self._write_active_meta(meta, backup_dir=None)
+            except Exception:
+                pass
 
             return {
                 "success": True,

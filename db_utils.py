@@ -546,6 +546,41 @@ class DBUtils:
         except Exception:
             return set()
 
+    def get_latest_published_rmse(self):
+        """
+        读取最近一次 published 的训练记录的 RMSE（作为线上模型 baseline 兜底）。
+        返回 float 或 None。
+        """
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            # 兼容字段名：publish_action / publish / status 等，以你表实际字段为准
+            # 优先用 publish_action='published'
+            sql = """
+                SELECT evaluation_rmse
+                FROM t_training_records
+                WHERE (publish_action='published' OR publish='published')
+                  AND evaluation_rmse IS NOT NULL
+                ORDER BY id DESC
+                LIMIT 1
+            """
+            cursor.execute(sql)
+            row = cursor.fetchone()
+            try:
+                cursor.close()
+                conn.close()
+            except Exception:
+                pass
+            if not row:
+                return None
+            # row 可能是 tuple/dict
+            if isinstance(row, dict):
+                return row.get("evaluation_rmse")
+            return row[0]
+        except Exception as e:
+            logger.warning(f"get_latest_published_rmse失败：{repr(e)}")
+            return None
+
     def get_recent_seed_samples_for_training(self, workface_id: int, before_date: str, limit: int = 1500) -> pd.DataFrame:
         """
         训练阶段使用：为跨批历史统计/趋势计算提供“历史种子行”

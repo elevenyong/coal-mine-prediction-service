@@ -334,6 +334,34 @@ class CoalMineRiskModel:
         finally:
             if self.config.getboolean("Logging", "verbose_console", fallback=True):
                 print("-" * 60)
+        # ===== 启动/加载时恢复 baseline_rmse，避免重启后预测返回 null =====
+        try:
+            # 1) 优先从 model_meta.json 读取
+            meta = {}
+            try:
+                meta = self.model_manager.get_active_model_info() if hasattr(self, "model_manager") else {}
+            except Exception:
+                meta = {}
+            rmse = None
+            if isinstance(meta, dict):
+                rmse = meta.get("baseline_rmse")
+            # 2) 如果 meta 没有，则从 DB 最近一次 published 记录兜底
+            if rmse is None and hasattr(self, "db") and self.db is not None:
+                try:
+                    rmse = self.db.get_latest_published_rmse()
+                except Exception:
+                    rmse = None
+            # 3) 写回内存 + 回写 meta（让下次启动直接命中）
+            if rmse is not None:
+                self.baseline_rmse = rmse
+                if isinstance(meta, dict):
+                    meta["baseline_rmse"] = rmse
+                    try:
+                        self.model_manager._write_active_meta(meta, backup_dir=None)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
     def calculate_fault_influence_strength(self, data):
         """计算断层影响系数（委托给FaultCalculator）"""
@@ -355,6 +383,41 @@ class CoalMineRiskModel:
             return self.data_preprocessor.preprocess_data(
                 data, is_training, self.fault_calculator, self.db
             )
+
+    def _update_active_model_baseline(self, evaluation_details: dict, publish_action: str):
+        """
+        将“当前线上模型”的基线评估指标写入 model_meta.json，供预测接口回传。
+        仅在 publish_action=published 时写入，避免 kept_previous / rollback 污染线上基线。
+        """
+        try:
+            if publish_action != "published":
+                return
+            if not hasattr(self, "model_manager") or self.model_manager is None:
+                return
+
+            rmse = None
+            try:
+                # 兼容 evaluation_details 结构
+                if isinstance(evaluation_details, dict):
+                    rmse = evaluation_details.get("avg_rmse")
+                    if rmse is None:
+                        rmse = evaluation_details.get("evaluation_rmse")
+            except Exception:
+                rmse = None
+
+            meta = self.model_manager.get_active_model_info()
+            if not isinstance(meta, dict):
+                meta = {}
+
+            meta["baseline_rmse"] = rmse
+            # 可选：把每目标指标也写进去，预测侧可以展示更详细的精度
+            if isinstance(evaluation_details, dict):
+                meta["baseline_eval"] = evaluation_details
+
+            # 写回线上 meta（不需要复制到 backup_dir，因为 save_model 已经在备份目录写过一次）
+            self.model_manager._write_active_meta(meta, backup_dir=None)
+        except Exception:
+            pass
 
     def _print_training_diagnosis(self):
         """
@@ -1029,6 +1092,14 @@ class CoalMineRiskModel:
                 if len(df) >= 100 and not hasattr(self, 'fixed_evaluation_set'):
                     logger.info("大数据量训练，设置固定评估集")
                     self.set_fixed_evaluation_set(df, size=50)
+                # ===== 补丁B：仅当本轮模型发布为线上模型时，写入 baseline_rmse 到 model_meta.json =====
+                try:
+                    self._update_active_model_baseline(
+                        evaluation_details=eval_result,   # 这里用 eval_result（里面有 avg_rmse / per_target）
+                        publish_action=publish_action
+                    )
+                except Exception:
+                    pass
                 # Step 13.5: 发布门控（首个可信评估可发布 + 后续按阈值门控）
                 # 目标：
                 # 1) 若线上尚无模型：首个 eval_success 直接发布，建立“生产起点”
@@ -1111,7 +1182,14 @@ class CoalMineRiskModel:
                         else:
                             # 线上本就没有模型，且本轮不满足发布条件
                             publish_action = "skipped"
-
+                        # ===== 补丁B：仅在 published 时，把评估RMSE写入 model_meta.json，供预测接口回传 =====
+                        try:
+                            self._update_active_model_baseline(
+                                evaluation_details=eval_result,
+                                publish_action=publish_action
+                            )
+                        except Exception:
+                            pass
                         logger.info(f"本轮不发布：publish_action={publish_action}")
                 except Exception as _pe:
                     logger.warning(f"发布流程异常（降级为不发布并保留线上）：{repr(_pe)}", exc_info=True)
@@ -1257,11 +1335,29 @@ class CoalMineRiskModel:
 
     def predict(self, data):
         """模型预测（委托给ModelPredictor）"""
-        return self.model_predictor.predict(
+        result = self.model_predictor.predict(
             data, self.models, self.preprocessor, self.training_features,
             self.data_preprocessor.target_features, self._fitted_feature_order, self.is_trained,
             self.file_lock, self.data_preprocessor, self.fault_calculator, self.db
         )
+        # 附加：当前线上模型信息（算法/版本/基线RMSE等），用于预测接口回传
+        try:
+            model_info = self.model_manager.get_active_model_info() if hasattr(self, 'model_manager') else {}
+            if not isinstance(model_info, dict):
+                model_info = {}
+            # baseline：优先 meta，其次内存；内存有值则回写 meta
+            if model_info.get("baseline_rmse") is None and self.baseline_rmse is not None:
+                model_info["baseline_rmse"] = self.baseline_rmse
+                try:
+                    self.model_manager._write_active_meta(model_info, backup_dir=None)
+                except Exception:
+                    pass
+            if self.eval_history:
+                model_info.setdefault('latest_evaluation', self.eval_history[-1])
+            result['model_info'] = model_info
+        except Exception:
+            result['model_info'] = {'baseline_rmse': self.baseline_rmse}
+        return result
 
     def retrain_from_db(self, workface_id=None, limit=None):
         """从数据库重新训练模型（向后兼容）"""

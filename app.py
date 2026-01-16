@@ -548,6 +548,7 @@ def predict():
             "duration": predict_result.get("duration", 0),
             # 防御：失败时 predictions 可能为 None，统一返回空列表，避免下游 len(None) 等二次异常
             "predictions": predict_result.get("predictions") or []
+            , "model": predict_result.get("model_info")
         }
         # 记录预测性能
         duration = time.time() - start_time

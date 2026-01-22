@@ -421,11 +421,12 @@ class ModelManager:
         :return: int，累计样本数
         """
         try:
-            with db_utils._get_connection() as conn:
+            # 统一用 SQLAlchemy engine.connect()（MySQL/SQLite 通用且更稳定）
+            with db_utils.engine.connect() as conn:
                 query_sql = text("SELECT COUNT(*) AS total FROM t_prediction_parameters")
                 result = conn.execute(query_sql)
                 row = result.fetchone()
-                total = row[0] if row else 0
+                total = int((row[0] if row else 0) or 0)  # None安全：COUNT(*) 理论不为None，但做兜底更稳
                 if total < 0:
                     raise ValueError(f"样本数异常：{total}（必须≥0）")
                 logger.info(f"从数据库查询累计样本数：{total}")

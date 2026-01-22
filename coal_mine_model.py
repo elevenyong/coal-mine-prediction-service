@@ -101,7 +101,7 @@ class CoalMineRiskModel:
             self.locked_algorithm = getattr(self.model_trainer, "algorithm", None)
 
         try:
-            self.total_samples = self.model_manager.get_total_samples_from_db(self.db)
+            self.total_samples = int(self.model_manager.get_total_samples_from_db(self.db) or 0)
         except Exception as e:
             self.total_samples = 0
             logger.warning(f"同步数据库样本数失败：{str(e)}，初始化为0")
@@ -247,7 +247,7 @@ class CoalMineRiskModel:
                                                                          is_int=True)
             # Step 7: 恢复关键状态
             self.models = current_models
-            self.total_samples = current_total_samples
+            self.total_samples = int(current_total_samples or 0)  # None安全：避免后续计算出现 int + NoneType
             self.training_stats = current_training_stats
             self.eval_history = current_eval_history
             self.baseline_rmse = current_baseline_rmse
@@ -255,6 +255,7 @@ class CoalMineRiskModel:
             self.preprocessor = current_preprocessor
             self.training_features = current_training_features
             self._fitted_feature_order = current_fitted_feature_order
+            self.locked_algorithm = current_locked_algorithm
 
             # Step 8: 同步预处理器状态
             if hasattr(self.data_preprocessor, 'is_trained'):
@@ -415,6 +416,59 @@ class CoalMineRiskModel:
                 meta["baseline_eval"] = evaluation_details
 
             # 写回线上 meta（不需要复制到 backup_dir，因为 save_model 已经在备份目录写过一次）
+            self.model_manager._write_active_meta(meta, backup_dir=None)
+        except Exception:
+            pass
+
+    def _update_active_model_status_meta(self,
+                                         last_train_time: str = None,
+                                         latest_evaluation: dict = None,
+                                         latest_rmse=None,
+                                         publish_action: str = None,
+                                         train_mode: str = None,
+                                         sample_count: int = None):
+        """
+        写入“最近一次训练/评估状态”到 model_meta.json（用于 /model/status 持久化兜底）
+        注意：与 _update_active_model_baseline 不同，这里不要求 published，任何训练尝试都可写入。
+        """
+        try:
+            if not hasattr(self, "model_manager") or self.model_manager is None:
+                return
+
+            meta = {}
+            try:
+                meta = self.model_manager.get_active_model_info()
+            except Exception:
+                meta = {}
+
+            if not isinstance(meta, dict):
+                meta = {}
+
+            if last_train_time:
+                meta["last_train_time"] = str(last_train_time)
+            if isinstance(latest_evaluation, dict):
+                meta["latest_evaluation"] = latest_evaluation
+
+            # 兼容 float / np.float 等
+            if latest_rmse is not None:
+                try:
+                    meta["latest_rmse"] = float(latest_rmse)
+                except Exception:
+                    meta["latest_rmse"] = latest_rmse
+
+            if publish_action is not None:
+                meta["last_publish_action"] = str(publish_action)
+            if train_mode is not None:
+                meta["last_train_mode"] = str(train_mode)
+            if sample_count is not None:
+                try:
+                    meta["last_train_sample_count"] = int(sample_count)
+                except Exception:
+                    meta["last_train_sample_count"] = sample_count
+
+            # 保存时间（用于兜底显示）
+            meta["saved_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
             self.model_manager._write_active_meta(meta, backup_dir=None)
         except Exception:
             pass
@@ -590,7 +644,21 @@ class CoalMineRiskModel:
         with self.file_lock:
             self._print_header("模型训练开始")
             train_start = datetime.now()
-            initial_samples = self.total_samples
+            initial_samples = int(getattr(self, 'total_samples', 0) or 0)  # None安全：避免 int + NoneType
+            # 运行时兜底：阈值配置可能因动态重载/解析失败变为 None/0，避免出现运算异常或除零
+            try:
+                self.full_train_threshold = int(self.full_train_threshold or 6)
+            except Exception:
+                self.full_train_threshold = 6
+            if self.full_train_threshold <= 0:
+                self.full_train_threshold = 6
+
+            try:
+                self.min_train_samples = int(self.min_train_samples or 6)
+            except Exception:
+                self.min_train_samples = 6
+            if self.min_train_samples <= 0:
+                self.min_train_samples = 6
             db_conn = None
             db_trans = None
             custom_create_time = None
@@ -989,7 +1057,7 @@ class CoalMineRiskModel:
                 logger.info(f"事务提交成功，{saved_count} 条数据已持久化")
                 # 关键修复：事务已提交，后续即使评估失败也不允许再rollback
                 db_trans = None
-                self.total_samples = self.model_manager.get_total_samples_from_db(self.db)
+                self.total_samples = int(self.model_manager.get_total_samples_from_db(self.db) or 0)
                 new_samples = self.total_samples - initial_samples
                 self._print_step(f"样本数更新：新增 {new_samples} 条，累计 {self.total_samples} 条")
                 # Step 9: 候选模型已训练完成（发布门控：仅当评估可信(success)时才覆盖线上模型）
@@ -1194,6 +1262,50 @@ class CoalMineRiskModel:
                 except Exception as _pe:
                     logger.warning(f"发布流程异常（降级为不发布并保留线上）：{repr(_pe)}", exc_info=True)
                     publish_action = "kept_previous" if online_exists else "skipped"
+                # ------------------------------------------------------------------
+                # 关键修复：训练/评估结果写入内存 + 持久化到 model_meta.json
+                # - 解决 /model/status 的 last_train_time/latest_evaluation 重启后为 null
+                # - 同时暴露 rmse（优先最新评估 avg_rmse）
+                # ------------------------------------------------------------------
+                try:
+                    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                    # 1) 内存训练统计（timestamp 用字符串，避免 JSON 序列化问题）
+                    try:
+                        self._save_training_stats(train_mode=reason, sample_count=len(df), agg_rmse=agg_rmse)
+                    except Exception:
+                        pass
+
+                    # 2) 内存评估历史（给 status 接口直接读）
+                    try:
+                        if not hasattr(self, "eval_history") or self.eval_history is None:
+                            self.eval_history = []
+                        if isinstance(eval_result, dict):
+                            _ev = dict(eval_result)
+                        else:
+                            _ev = {"status": "none", "message": "no evaluation"}
+                        _ev.setdefault("timestamp", ts)
+                        _ev.setdefault("train_mode", reason)
+                        _ev.setdefault("publish_action", publish_action)
+                        self.eval_history.append(_ev)
+                        self.eval_history = self.eval_history[-200:]
+                    except Exception:
+                        pass
+
+                    # 3) 持久化兜底（服务重启后仍可查）
+                    try:
+                        self._update_active_model_status_meta(
+                            last_train_time=ts,
+                            latest_evaluation=(self.eval_history[-1] if self.eval_history else None),
+                            latest_rmse=agg_rmse,
+                            publish_action=publish_action,
+                            train_mode=reason,
+                            sample_count=len(df)
+                        )
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
                 # Step 12: 记录训练历史到数据库
                 train_duration = (datetime.now() - train_start).total_seconds()
                 # 监控调用
@@ -1215,13 +1327,18 @@ class CoalMineRiskModel:
                         invalid_reason = str(eval_result.get("message") or "")
                 except Exception:
                     invalid_reason = ""
+                eval_status_for_record = (eval_result or {}).get("status", None)
                 training_record = {
                     "sample_count": len(df),
                     "total_samples": self.total_samples,
                     "train_mode": reason,
                     "status": record_status,
-                    "message": f"训练完成（{reason}），RMSE：{rmse_str}，eval={eval_status}，publish={publish_action}"
+                    "message": f"训练完成（{reason}），RMSE：{rmse_str}，eval={eval_status_for_record}，publish={publish_action}"
                     +(f"，原因：{invalid_reason}" if invalid_reason else ""),
+                    "evaluation_rmse": agg_rmse,  # 评估聚合RMSE（评估无效时应为None，属于真实结果）
+                    "eval_status": eval_status_for_record,  # success / warning / ...
+                    "publish_action": publish_action,  # published / kept_previous / skipped
+                    "publish": publish_action,  # 与publish_action保持一致，便于查询最近published基线
                     "duration": train_duration,
                     "train_time": datetime.now()
                 }
@@ -1229,7 +1346,7 @@ class CoalMineRiskModel:
 
                 # ===== P0：统一对外语义（success / partial_success / warning）=====
                 warnings = []
-                eval_status = (eval_result or {}).get("status", None)
+                eval_status = eval_status_for_record
                 eval_code = (eval_result or {}).get("code", None)
 
                 final_status = "success"
@@ -1420,7 +1537,37 @@ class CoalMineRiskModel:
             except Exception:
                 backup_count = 0
 
+        # 兜底：从 model_meta.json 读取最近一次训练/评估信息（解决重启后 null）
+        meta = {}
+        try:
+            if hasattr(self, "model_manager") and self.model_manager is not None:
+                meta = self.model_manager.get_active_model_info()
+        except Exception:
+            meta = {}
+
         latest_eval = self.eval_history[-1] if self.eval_history else None
+        if latest_eval is None and isinstance(meta, dict):
+            # 优先最新评估，其次 baseline_eval（被发布时写入）
+            latest_eval = meta.get("latest_evaluation") or meta.get("baseline_eval")
+
+        last_train_time = self.training_stats[-1]["timestamp"] if self.training_stats else None
+        if last_train_time is None and isinstance(meta, dict):
+            last_train_time = meta.get("last_train_time") or meta.get("saved_at") or meta.get("updated_at")
+
+        # rmse：优先 latest_evaluation.avg_rmse，其次 meta.latest_rmse，再次 baseline_rmse
+        rmse = None
+        try:
+            if isinstance(latest_eval, dict):
+                rmse = latest_eval.get("avg_rmse")
+        except Exception:
+            rmse = None
+
+        if rmse is None and isinstance(meta, dict):
+            rmse = meta.get("latest_rmse")
+        if rmse is None:
+            rmse = getattr(self, "baseline_rmse", None)
+            if rmse is None and isinstance(meta, dict):
+                rmse = meta.get("baseline_rmse")
 
         return {
             "is_trained": self.is_trained,
@@ -1429,7 +1576,9 @@ class CoalMineRiskModel:
             "target_features": self.data_preprocessor.target_features,
             "backup_count": backup_count,
             "latest_evaluation": latest_eval,
-            "last_train_time": self.training_stats[-1]["timestamp"] if self.training_stats else None
+            "last_train_time": last_train_time,
+            "rmse": rmse,
+            "baseline_rmse": getattr(self, "baseline_rmse", None)
         }
 
     def _save_training_stats(self, train_mode, sample_count, agg_rmse):
@@ -1437,7 +1586,7 @@ class CoalMineRiskModel:
         if not hasattr(self, 'training_stats'):
             self.training_stats = []
         self.training_stats.append({
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "train_mode": train_mode,
             "sample_count": sample_count,
             "total_samples": self.total_samples,
@@ -1714,12 +1863,18 @@ class CoalMineRiskModel:
                 )
 
                 # Step 16: 记录训练历史
+                eval_status_for_record = (eval_result or {}).get("status", None)
+                eval_rmse_for_record = (eval_result or {}).get("avg_rmse", None)
                 training_record = {
                     "sample_count": len(df_processed),
                     "total_samples": self.total_samples,  # 注意：不更新总样本数
                     "train_mode": "full_retrain",
                     "status": "success",
-                    "message": f"全量重新训练完成，样本数：{len(df_processed)}，RMSE：{eval_result.get('avg_rmse') if eval_result else '未评估'}",
+                    "message": f"全量重新训练完成，样本数：{len(df_processed)}，RMSE：{eval_rmse_for_record if eval_rmse_for_record is not None else '未评估'}",
+                    "evaluation_rmse": eval_rmse_for_record,
+                    "eval_status": eval_status_for_record,
+                    "publish_action": publish_action,
+                    "publish": publish_action,
                     "duration": train_duration,
                     "train_time": datetime.now()
                 }

@@ -14,6 +14,12 @@ import time
 import configparser
 from performance_monitor import global_monitor
 from source_prediction import SourcePredictionCalculator
+# Swagger（接口文档）
+# 依赖：pip install flasgger
+try:
+    from flasgger import Swagger
+except Exception:  # pragma: no cover
+    Swagger = None
 
 # 导入项目核心模块
 from setup_logging import setup_logging
@@ -37,6 +43,38 @@ server_config = {
 BRIEF_TRAINING_LOGS = config.getboolean("Logging", "brief_training_logs", fallback=True)
 # 3. 初始化Flask应用
 app = Flask(__name__)
+# -------------------- Swagger 文档（默认访问 /apidocs/） --------------------
+# flasgger 会从每个视图函数 docstring 中解析 YAML（"---" 之后）生成接口文档。
+swagger_template = {
+    "swagger": "2.0",
+    "info": {
+        "title": "煤矿瓦斯风险预测系统 API",
+        "description": "提供区域措施强度计算、模型训练（全量/增量）、瓦斯指标预测、模型状态/回滚/重训等接口。",
+        "version": "1.0.0"
+    },
+    "basePath": "/",
+    "schemes": ["http", "https"],
+}
+
+swagger_config = {
+    "headers": [],
+    "specs": [
+        {
+            "endpoint": "apispec_1",
+            "route": "/swagger.json",
+            "rule_filter": lambda rule: True,
+            "model_filter": lambda tag: True,
+        }
+    ],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/apidocs/",
+}
+
+if Swagger is not None:
+    Swagger(app, template=swagger_template, config=swagger_config)
+else:
+    logger.warning("未安装 flasgger，Swagger 文档不可用。可执行：pip install flasgger")
 # 4. 初始化数据库工具与核心模型（全局单例，避免重复创建）
 db_utils = DBUtils(config_path="config.ini")
 model = CoalMineRiskModel(config_path="config.ini")
@@ -117,6 +155,28 @@ def calculate_regional_strength():
         "coal_density": 1.45           # 煤密度（吨/立方米，可选，默认1.4）
     }
     返回结果：包含计算出的区域措施强度（吨煤钻孔量）及输入参数
+        ---
+    tags:
+      - RegionalMeasure
+    summary: 区域措施强度计算（吨煤钻孔量）
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required: [drill_total_length, coal_seam_thickness, working_area]
+          properties:
+            drill_total_length: {type: number, example: 1200.5}
+            coal_seam_thickness: {type: number, example: 3.2}
+            working_area: {type: number, example: 800.0}
+            coal_density: {type: number, example: 1.45}
+    responses:
+      200: {description: 计算成功}
+      400: {description: 参数错误}
+      500: {description: 服务器错误}
     """
     logger.info("接收到【区域措施强度计算】请求（吨煤钻孔量逻辑）")
     start_time = time.time()
@@ -183,6 +243,56 @@ def calculate_regional_strength():
 def train_model():
     """
     模型训练接口（增强时空数据处理）
+        ---
+    tags:
+      - Model
+    summary: 训练模型（全量/增量自动判定）
+    description: |
+      输入样本列表进行训练。系统会自动补齐/校验时空字段、计算断层影响系数，并调用核心模型训练流程。
+      训练完成后会进行评估与发布策略判定（published/kept_previous/rollback 等）。
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required: [data]
+          properties:
+            epochs:
+              type: integer
+              example: 3
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  borehole_id: {type: string, example: "1.0"}
+                  coal_thickness: {type: number, example: 3.1}
+                  distance_from_entrance: {type: number, example: 105.5}
+                  distance_to_face: {type: number, example: 9.0}
+                  drilling_depth: {type: number, example: 9.0}
+                  face_advance_distance: {type: number, example: 105.5}
+                  measurement_date: {type: string, example: "2025-08-13"}
+                  regional_measure_strength: {type: number, example: 16.5}
+                  roadway: {type: string, example: "mining"}
+                  roadway_id: {type: integer, example: 11}
+                  work_stage: {type: string, example: "回采"}
+                  workface_id: {type: integer, example: 1}
+                  working_face: {type: integer, example: 15080}
+                  x_coord: {type: number, example: 36603.8164}
+                  y_coord: {type: number, example: 49490.3137}
+                  z_coord: {type: number, example: -657.6667}
+                  drilling_cuttings_s: {type: number, example: 2.0}
+                  gas_emission_velocity_q: {type: number, example: 0.35}
+    responses:
+      200:
+        description: 训练完成（可能成功/部分成功/回滚）
+      400:
+        description: 参数校验失败
+      500:
+        description: 服务器错误
     """
     logger.info("接收到【模型训练】请求（时空增强版）")
     start_time = time.time()
@@ -500,6 +610,52 @@ def predict():
     """
     瓦斯指标预测接口（支持批量预测，分源参数全则用分源结果，否则用模型预测）
     返回结果：每个样本的瓦斯指标预测值（瓦斯涌出量Q、钻屑量S等）
+        ---
+    tags:
+      - Model
+    summary: 预测（S：钻屑量，q：瓦斯涌出初速度）
+    description: |
+      支持两种请求体：
+      1) {"data":[{...},{...}]}
+      2) 直接数组 [{...},{...}]
+      系统会自动计算断层影响系数，并使用当前 active_version 模型进行预测。
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  borehole_id: {type: string, example: "1.0"}
+                  coal_thickness: {type: number, example: 3.0}
+                  distance_from_entrance: {type: number, example: 241.0}
+                  distance_to_face: {type: number, example: 9.0}
+                  drilling_depth: {type: number, example: 9.0}
+                  face_advance_distance: {type: number, example: 241.0}
+                  measurement_date: {type: string, example: "2025-10-06"}
+                  regional_measure_strength: {type: number, example: 16.5}
+                  roadway: {type: string, example: "mining"}
+                  roadway_id: {type: integer, example: 11}
+                  work_stage: {type: string, example: "回采"}
+                  workface_id: {type: integer, example: 1}
+                  working_face: {type: integer, example: 15080}
+                  x_coord: {type: number, example: 36571.6966}
+                  y_coord: {type: number, example: 49625.9735}
+                  z_coord: {type: number, example: -656.4011}
+    responses:
+      200:
+        description: 预测成功
+      400:
+        description: 参数错误
+      500:
+        description: 服务器错误
     """
     logger.info("接收到【瓦斯指标预测】请求")
     start_time = time.time()
@@ -541,14 +697,61 @@ def predict():
         predict_result = model.predict(data_with_fault)
         predict_result["duration"] = round(time.time() - start_time, 2)
         # 简化返回结果
+        # simplified_result = {
+        #     "success": predict_result.get("success", False),
+        #     "message": predict_result.get("message", ""),
+        #     "sample_count": predict_result.get("sample_count", 0),
+        #     "duration": predict_result.get("duration", 0),
+        #     # 防御：失败时 predictions 可能为 None，统一返回空列表，避免下游 len(None) 等二次异常
+        #     "predictions": predict_result.get("predictions") or []
+        #     , "model": predict_result.get("model_info")
+        # }
+        predict_duration = round(time.time() - start_time, 2)
+
+        # -------------------- 返回值精简：仅返回你需要的字段 --------------------
+        # 目标字段：
+        # 预测用时、模型版本、算法、最后一次训练时间、模型RMSE、模型总样本数、预测值
+        model_info = predict_result.get("model_info") or {}
+        if not isinstance(model_info, dict):
+            model_info = {}
+
+        # 兜底：从 status 读取 last_train_time / rmse / total_samples（重启后也稳定）
+        try:
+            status_info = model.get_model_status() or {}
+        except Exception:
+            status_info = {}
+
+        model_version = model_info.get("active_version") or status_info.get("active_version")
+        algorithm = model_info.get("algorithm") or status_info.get("algorithm")
+
+        # 最后一次训练时间：优先 meta(last_train_time)，其次 status(last_train_time)，再兜底 meta(saved_at)
+        last_train_time = (
+            model_info.get("last_train_time")
+            or status_info.get("last_train_time")
+            or model_info.get("saved_at")
+            or status_info.get("saved_at")
+        )
+
+        # RMSE：优先 status.rmse（已经按 latest_eval.avg_rmse 优先），其次 meta.latest_rmse/baseline_rmse
+        rmse = (
+            status_info.get("rmse")
+            or model_info.get("latest_rmse")
+            or model_info.get("baseline_rmse")
+        )
+
+        total_samples = status_info.get("total_samples", getattr(model, "total_samples", 0))
+
         simplified_result = {
             "success": predict_result.get("success", False),
             "message": predict_result.get("message", ""),
-            "sample_count": predict_result.get("sample_count", 0),
-            "duration": predict_result.get("duration", 0),
-            # 防御：失败时 predictions 可能为 None，统一返回空列表，避免下游 len(None) 等二次异常
+            "predict_duration": predict_duration,
+            "model_version": model_version,
+            "algorithm": algorithm,
+            "last_train_time": last_train_time,
+            "rmse": rmse,
+            "total_samples": total_samples,
+            # 防御：失败时 predictions 可能为 None，统一返回空列表
             "predictions": predict_result.get("predictions") or []
-            , "model": predict_result.get("model_info")
         }
         # 记录预测性能
         duration = time.time() - start_time
@@ -600,6 +803,17 @@ def get_model_status():
     """
     模型当前状态查询接口（无需请求参数）
     返回结果：模型训练状态、累计样本数、备份数、最新评估结果等
+        ---
+    tags:
+      - Model
+    summary: 查询模型状态
+    produces:
+      - application/json
+    responses:
+      200:
+        description: 查询成功
+      500:
+        description: 服务器错误
     """
     logger.info("接收到【模型状态查询】请求")
     start_time = time.time()
@@ -627,7 +841,7 @@ def get_model_status():
             "data": status
         }
         logger.info(f"模型状态查询成功，训练状态：{'已训练' if status['is_trained'] else '未训练'}")
-        return jsonify(response)
+        return jsonify(_to_json_serializable(response))
     except Exception as e:
         # 捕获异常并返回错误
         duration = time.time() - start_time
@@ -661,6 +875,29 @@ def retrain_model():
         "force_full_train": true # 可选，强制全量训练（默认true）
     }
     返回结果：重新训练状态、样本统计
+        ---
+    tags:
+      - Model
+    summary: 从数据库重新训练（全量/恢复模型）
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: false
+        schema:
+          type: object
+          properties:
+            workface_id: {type: integer, example: 1}
+            sample_limit: {type: integer, example: 1000}
+            force_full_train: {type: boolean, example: true}
+    responses:
+      200:
+        description: 重训完成
+      400:
+        description: 参数错误
+      500:
+        description: 服务器错误
     """
     logger.info("接收到【从数据库重新训练】请求（全量重新训练）")
     start_time = time.time()
@@ -776,6 +1013,29 @@ def rollback_model():
         "backup_index": -1  # 备份索引，默认-1（最新备份），-2=上一版，依此类推
     }
     返回结果：回滚状态、备份时间戳
+        ---
+    tags:
+      - Model
+    summary: 回滚模型到历史备份版本
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: false
+        schema:
+          type: object
+          properties:
+            backup_index:
+              type: integer
+              example: -1
+    responses:
+      200:
+        description: 回滚完成
+      400:
+        description: 参数错误
+      500:
+        description: 服务器错误
     """
     logger.info("接收到【模型回滚】请求")
     start_time = time.time()

@@ -17,8 +17,9 @@ from typing import Dict, Optional, Set, List, Any
 
 import pandas as pd
 from loguru import logger
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, event
 from sqlalchemy.engine import Connection
+from sqlalchemy.pool import StaticPool
 
 
 class DBUtils:
@@ -35,16 +36,19 @@ class DBUtils:
     TABLE_FEATURE = "t_feature_cache"
 
     def __init__(self, config_path: str = "config.ini"):
-        logger.warning(f"[诊断] 正在加载 DBUtils 文件：{__file__}")
         self.config_path = config_path
         self.config = configparser.ConfigParser()
         self.config.read(config_path, encoding="utf-8")
 
         # Step 1: 读取数据库配置
         self.db_config = self._read_db_config()
-
+        # 额外保存数据库类型（mysql/sqlite），后续分支判断用
+        # 注意：不改变原字段命名，尽量最小入侵
+        self.db_type = (self.db_config.get("db_type") or "mysql").strip().lower()
         # Step 2: 创建 engine
         self.engine = self._build_engine(self.db_config)
+        # 重要：SQLite 模式下首次启动可能没有表结构（你说“表结构你那边有”）
+        # 本工具只做“最小兜底建表 + 动态加列/增强列迁移”，不会覆盖你已有表（IF NOT EXISTS）
 
         # Step 3: 加载动态字段配置（只针对 t_prediction_parameters 动态加列）
         self.dynamic_columns: Dict[str, str] = {}
@@ -70,14 +74,24 @@ class DBUtils:
     # -------------------------------------------------------------------------
     def _read_db_config(self) -> Dict[str, str]:
         try:
+            # ============ 核心改造：兼容 sqlite ============
+            # sqlite 模式下可不配置 host/port/user/password，但为了“不破坏旧配置”，仍保留这些字段读取
+            # 若配置文件里没有这些键，也不会报错（fallback=""）
             host = self.config.get("Database", "host")
             port = self.config.get("Database", "port")
             user = self.config.get("Database", "user")
             password = os.getenv("DB_PASSWORD") or self.config.get("Database", "password")
             db_name = self.config.get("Database", "db_name")
             charset = self.config.get("Database", "charset", fallback="utf8mb4")
-
+            # ============ 核心改造1：新增可选配置项（不破坏旧配置） ============
+            # db_type: mysql / sqlite
+            # sqlite_path: sqlite 文件路径（db_type=sqlite 时生效）
+            db_type = self.config.get("Database", "db_type", fallback="mysql")
+            sqlite_path = self.config.get("Database", "sqlite_path", fallback="").strip()
+            # 注意：你原来的 return 没带 db_type/sqlite_path，导致永远无法切换
             return {
+                "db_type": db_type,
+                "sqlite_path": sqlite_path,
                 "host": host,
                 "port": port,
                 "user": user,
@@ -90,6 +104,49 @@ class DBUtils:
             raise
 
     def _build_engine(self, db_conf: Dict[str, str]):
+        """
+        构建 SQLAlchemy Engine：
+        - db_type=mysql：保持原行为（mysql+pymysql）
+        - db_type=sqlite：使用 sqlite+pysqlite（Python 3.11 内置），并做并发/外键等兼容
+        """
+        db_type = (db_conf.get("db_type") or "mysql").strip().lower()
+
+        # -------------------- SQLite 分支 --------------------
+        if db_type == "sqlite":
+            sqlite_path = (db_conf.get("sqlite_path") or "").strip()
+            if not sqlite_path:
+                # 兜底：用 db_name 作为文件名
+                sqlite_path = f"{db_conf.get('db', 'database')}.sqlite"
+
+            # 相对路径 -> 以当前工作目录为基准
+            sqlite_path = os.path.abspath(sqlite_path)
+            os.makedirs(os.path.dirname(sqlite_path), exist_ok=True)
+
+            db_url = f"sqlite+pysqlite:///{sqlite_path}"
+
+            # SQLite 常见 Flask 多线程场景：check_same_thread=False
+            # 这里使用 StaticPool，避免线程/连接池行为差异导致 “no such table” 等偶发现象
+            engine = create_engine(
+                db_url,
+                future=True,
+                connect_args={"check_same_thread": False},
+                poolclass=StaticPool
+            )
+
+            # 外键约束默认关闭，显式开启
+            @event.listens_for(engine, "connect")
+            def _set_sqlite_pragma(dbapi_connection, connection_record):  # pragma: no cover
+                try:
+                    cursor = dbapi_connection.cursor()
+                    cursor.execute("PRAGMA foreign_keys=ON;")
+                    cursor.close()
+                except Exception:
+                    pass
+
+            logger.info(f"SQLite 引擎已创建：{sqlite_path}")
+            return engine
+
+        # -------------------- MySQL 分支（原逻辑保持不变） --------------------
         db_url = (
             f"mysql+pymysql://{db_conf['user']}:{db_conf['password']}@"
             f"{db_conf['host']}:{db_conf['port']}/{db_conf['db']}?charset={db_conf['charset']}"
@@ -101,6 +158,25 @@ class DBUtils:
             max_overflow=10,
             future=True
         )
+
+    def _is_sqlite(self) -> bool:
+        """
+        判断当前 engine 是否 SQLite。
+        必须可靠：否则会误走 information_schema，导致列检测失败、重复加列。
+        """
+        try:
+            # 最高优先：SQLAlchemy dialect.name
+            if getattr(self.engine, "dialect", None) is not None:
+                if getattr(self.engine.dialect, "name", "").lower() == "sqlite":
+                    return True
+        except Exception:
+            pass
+
+        # 次优先：配置中的 db_type
+        try:
+            return str(getattr(self, "db_type", "")).strip().lower() == "sqlite"
+        except Exception:
+            return False
 
     def _get_connection(self) -> Connection:
         """
@@ -132,7 +208,8 @@ class DBUtils:
             old_engine = self.engine
             self.engine = new_engine
             self.db_config = new_db_conf
-
+            # 关键：同步 db_type，供 _is_sqlite/_get_table_columns 等分支判断使用
+            self.db_type = (new_db_conf.get("db_type") or "mysql").strip().lower()
             try:
                 old_engine.dispose()
             except Exception:
@@ -145,6 +222,8 @@ class DBUtils:
             # 清空缓存
             self._pred_table_cols_cache = None
             self._pred_table_cols_cache_ts = 0.0
+            self._feature_table_cols_cache = None
+            self._feature_table_cols_cache_ts = 0.0
 
             logger.info("数据库配置重载完成")
             return True
@@ -187,46 +266,42 @@ class DBUtils:
             return
 
         try:
-            rows = conn.execute(text("""
-                SELECT COLUMN_NAME
-                FROM information_schema.COLUMNS
-                WHERE TABLE_SCHEMA = DATABASE()
-                  AND TABLE_NAME = :table_name
-            """), {"table_name": self.TABLE_PRED}).fetchall()
-            existing = {r[0] for r in rows} if rows else set()
+            existing = self._get_table_columns(self.TABLE_PRED, conn)
 
             for col_name, col_type in self.dynamic_columns.items():
                 if col_name in existing:
                     continue
-                alter_sql = text(f"""
-                    ALTER TABLE {self.TABLE_PRED}
-                    ADD COLUMN {col_name} {col_type} COMMENT '动态字段'
-                """)
-                conn.execute(alter_sql)
-                logger.debug(f"动态添加字段：{col_name} {col_type}")
 
-            # 动态字段变化后刷新缓存
+                try:
+                    if self._is_sqlite():
+                        conn.execute(text(f"ALTER TABLE {self.TABLE_PRED} ADD COLUMN {col_name} {col_type}"))
+                    else:
+                        conn.execute(text(f"""
+                            ALTER TABLE {self.TABLE_PRED}
+                            ADD COLUMN {col_name} {col_type} COMMENT '动态字段'
+                        """))
+                    logger.debug(f"动态添加字段：{col_name} {col_type}")
+
+                except Exception as e:
+                    if "duplicate column name" in str(e).lower() or "duplicate" in str(e).lower():
+                        logger.warning(f"动态字段已存在（忽略）：{col_name}")
+                        continue
+                    raise
+
+            # 刷新缓存
             self._pred_table_cols_cache = None
             self._pred_table_cols_cache_ts = 0.0
 
         except Exception as e:
-            logger.error(f"动态添加字段失败：{str(e)}", exc_info=True)
+            logger.error(f"动态添加字段失败：{repr(e)}", exc_info=True)
 
     def _add_feature_cache_columns(self, conn: Connection):
         """
-        为 t_feature_cache（TABLE_FEATURE）补齐增强特征列（不存在才加）
-        目的：保证训练/评估/预测阶段对 rolling_mean / hist_fused 等增强列一致可用。
+        为 t_feature_cache 补齐增强特征列（不存在才加）
         """
         try:
-            rows = conn.execute(text("""
-                SELECT COLUMN_NAME
-                FROM information_schema.COLUMNS
-                WHERE TABLE_SCHEMA = DATABASE()
-                  AND TABLE_NAME = :table_name
-            """), {"table_name": self.TABLE_FEATURE}).fetchall()
-            existing = {r[0] for r in rows} if rows else set()
+            existing = self._get_table_columns(self.TABLE_FEATURE, conn)
 
-            # 需要补齐的列（只补你当前系统会用到的增强列）
             to_add = {
                 "gas_emission_velocity_q_rolling_mean": "FLOAT",
                 "gas_emission_velocity_q_hist_fused": "FLOAT",
@@ -235,11 +310,24 @@ class DBUtils:
             for col_name, col_type in to_add.items():
                 if col_name in existing:
                     continue
-                conn.execute(text(f"""
-                    ALTER TABLE {self.TABLE_FEATURE}
-                    ADD COLUMN {col_name} {col_type} COMMENT '增强特征自动迁移'
-                """))
-                logger.debug(f"特征缓存表自动迁移：新增字段 {col_name} {col_type}")
+
+                try:
+                    if self._is_sqlite():
+                        conn.execute(text(f"ALTER TABLE {self.TABLE_FEATURE} ADD COLUMN {col_name} {col_type}"))
+                    else:
+                        conn.execute(text(f"""
+                            ALTER TABLE {self.TABLE_FEATURE}
+                            ADD COLUMN {col_name} {col_type} COMMENT '增强特征自动迁移'
+                        """))
+                    logger.debug(f"特征缓存表自动迁移：新增字段 {col_name} {col_type}")
+
+                except Exception as e:
+                    # 幂等兜底：即便并发/误判导致重复加列，也不要让系统挂掉
+                    if "duplicate column name" in str(e).lower() or "duplicate" in str(e).lower():
+                        logger.debug(f"特征缓存表字段已存在（忽略）：{col_name}")
+                        continue
+                    raise
+
         except Exception as e:
             logger.warning(f"特征缓存表字段自动迁移失败（已忽略）：{repr(e)}", exc_info=True)
 
@@ -253,6 +341,81 @@ class DBUtils:
         conn = self._get_connection()
         trans = conn.begin()
         try:
+            # -------------------- SQLite 分支说明 --------------------
+            # 你的项目当前建表 SQL 是 MySQL 方言（AUTO_INCREMENT / ENGINE / COMMENT / information_schema）。
+            # SQLite 不支持这些语法。
+            #
+            # 你已明确“表结构你这边有”，因此这里采取“最小入侵策略”：
+            # - 若使用 sqlite：不执行 MySQL 方言建表；仅在表不存在时做极简兜底建表（IF NOT EXISTS，不会覆盖你已有表）。
+            if self._is_sqlite():
+                # 极简兜底：仅保证核心表存在，避免系统首次启动因缺表报错
+                # 注意：若你已经自行创建了完整表结构，这里不会覆盖（IF NOT EXISTS）。
+                conn.execute(text(f"""
+                    CREATE TABLE IF NOT EXISTS {self.TABLE_PRED} (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        working_face TEXT NOT NULL,
+                        workface_id INTEGER,
+                        work_stage TEXT,
+                        roadway TEXT,
+                        roadway_id TEXT,
+                        x_coord REAL, y_coord REAL, z_coord REAL,
+                        distance_from_entrance REAL,
+                        borehole_id TEXT,
+                        drilling_depth REAL,
+                        measurement_date TEXT,
+                        distance_to_face REAL,
+                        face_advance_distance REAL,
+                        advance_rate REAL,
+                        coal_thickness REAL,
+                        fault_influence_strength REAL,
+                        regional_measure_strength INTEGER,
+                        drilling_cuttings_s REAL,
+                        gas_emission_velocity_q REAL,
+                        create_time TEXT
+                    )
+                """))
+                conn.execute(text(
+                    f"CREATE INDEX IF NOT EXISTS idx_pred_measurement_date ON {self.TABLE_PRED}(measurement_date)"))
+                conn.execute(
+                    text(f"CREATE INDEX IF NOT EXISTS idx_pred_working_face ON {self.TABLE_PRED}(working_face)"))
+
+                conn.execute(text(f"""
+                    CREATE TABLE IF NOT EXISTS {self.TABLE_FEATURE} (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pred_id INTEGER NOT NULL,
+                        working_face TEXT NOT NULL,
+                        workface_id INTEGER,
+                        work_stage TEXT,
+                        measurement_date TEXT,
+                        x_coord REAL, y_coord REAL, z_coord REAL,
+                        distance_to_face REAL,
+                        coord_hash TEXT,
+                        spatiotemporal_group TEXT,
+                        gas_emission_velocity_q_rolling_mean REAL,
+                        gas_emission_velocity_q_hist_fused REAL,
+                        create_time TEXT
+                    )
+                """))
+                conn.execute(text(f"CREATE INDEX IF NOT EXISTS idx_feature_pred_id ON {self.TABLE_FEATURE}(pred_id)"))
+
+                conn.execute(text(f"""
+                    CREATE TABLE IF NOT EXISTS {self.TABLE_TRAIN} (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        sample_count INTEGER,
+                        total_samples INTEGER,
+                        train_mode TEXT,
+                        status TEXT,
+                        message TEXT,
+                        duration REAL,
+                        train_time TEXT
+                    )
+                """))
+                # SQLite 分支也要执行“补列”逻辑：否则你自建表轻微缺列时，会直接在写入阶段爆炸
+                self._add_feature_cache_columns(conn)
+                self._add_dynamic_columns(conn)
+                trans.commit()
+                logger.info("SQLite：已完成极简兜底建表/索引（如你已有完整表结构，不会覆盖）")
+                return
             # Step 1: 核心样本表（保留原表，不删列）
             conn.execute(text(f"""
             CREATE TABLE IF NOT EXISTS {self.TABLE_PRED} (
@@ -548,37 +711,48 @@ class DBUtils:
 
     def get_latest_published_rmse(self):
         """
-        读取最近一次 published 的训练记录的 RMSE（作为线上模型 baseline 兜底）。
-        返回 float 或 None。
+        读取最近一次“已发布（published）”训练记录的 evaluation_rmse，用作线上基线（baseline）兜底。
+
+        设计原则（解决问题而非掩盖）：
+        - 统一使用 SQLAlchemy 连接（MySQL/SQLite 通用），避免 get_connection/cursor 风格混用导致不稳定；
+        - 若表结构缺列（历史库未迁移），明确给出告警与修复建议，而不是让后续逻辑出现隐式 None 引发误判；
+        - 正常情况下返回 float 或 None（当未找到 published 记录/或 evaluation_rmse 为空）。
         """
         try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            # 兼容字段名：publish_action / publish / status 等，以你表实际字段为准
-            # 优先用 publish_action='published'
-            sql = """
+            sql = text("""
                 SELECT evaluation_rmse
                 FROM t_training_records
-                WHERE (publish_action='published' OR publish='published')
+                WHERE (publish_action = :published OR publish = :published)
                   AND evaluation_rmse IS NOT NULL
                 ORDER BY id DESC
                 LIMIT 1
-            """
-            cursor.execute(sql)
-            row = cursor.fetchone()
-            try:
-                cursor.close()
-                conn.close()
-            except Exception:
-                pass
+            """)
+            with self.engine.connect() as conn:
+                row = conn.execute(sql, {"published": "published"}).fetchone()
+
             if not row:
                 return None
-            # row 可能是 tuple/dict
-            if isinstance(row, dict):
-                return row.get("evaluation_rmse")
-            return row[0]
+
+            v = row[0]
+            if v is None:
+                return None
+            try:
+                return float(v)
+            except Exception:
+                # 数据类型异常：返回 None，但不抛异常影响训练主流程
+                logger.warning(f"get_latest_published_rmse：evaluation_rmse无法转换为float，value={v!r}")
+                return None
+
         except Exception as e:
-            logger.warning(f"get_latest_published_rmse失败：{repr(e)}")
+            msg = str(e)
+            # MySQL: 1054 Unknown column；SQLite: no such column
+            if "Unknown column" in msg or "no such column" in msg:
+                logger.error(
+                    "get_latest_published_rmse失败：t_training_records表结构与代码不一致（缺少 publish_action/publish/evaluation_rmse 等列）。"
+                    "请确认已执行表结构迁移：evaluation_rmse、eval_status、publish_action、publish。"
+                )
+            else:
+                logger.warning(f"get_latest_published_rmse失败：{repr(e)}")
             return None
 
     def get_recent_seed_samples_for_training(self, workface_id: int, before_date: str, limit: int = 1500) -> pd.DataFrame:
@@ -631,6 +805,13 @@ class DBUtils:
             dt = pd.to_datetime(measurement_date, errors="coerce")
             if pd.isna(dt):
                 return {}
+            # SQLite：避免 pandas.Timestamp 直接绑定导致 “type Timestamp is not supported”
+            dt_param = dt
+            if self._is_sqlite():
+                try:
+                    dt_param = pd.to_datetime(dt).strftime("%Y-%m-%d")
+                except Exception:
+                    dt_param = str(measurement_date)
 
             with self.engine.connect() as conn:
                 # 不传 conn：避免旧版本签名/重复定义导致的关键字参数不兼容
@@ -653,7 +834,7 @@ class DBUtils:
                     LIMIT 1
                 """)
                 row = conn.execute(sql,
-                                   {"wid": int(workface_id), "grp": str(spatiotemporal_group), "dt": dt}).fetchone()
+                                   {"wid": int(workface_id), "grp": str(spatiotemporal_group), "dt": dt_param}).fetchone()
 
             if not row:
                 return {}
@@ -1314,23 +1495,43 @@ class DBUtils:
 
     def _get_table_columns(self, table_name: str, conn: Optional[Connection] = None) -> Set[str]:
         """
-        获取任意表字段集合（不缓存）
+        获取表字段集合（MySQL/SQLite 兼容）
+        - SQLite：PRAGMA table_info
+        - MySQL：information_schema.COLUMNS
+        并提供回退：避免误判导致列检测失败、从而重复加列。
         """
         close_after = False
         if conn is None:
-            conn = self._get_connection()
+            conn = self.engine.connect()
             close_after = True
+
         try:
-            rows = conn.execute(text("""
-                SELECT COLUMN_NAME
-                FROM information_schema.COLUMNS
-                WHERE TABLE_SCHEMA = DATABASE()
-                  AND TABLE_NAME = :table_name
-            """), {"table_name": table_name}).fetchall()
-            return {r[0] for r in rows} if rows else set()
-        except Exception as e:
-            logger.warning(f"读取表字段失败（{table_name}）：{str(e)}")
-            return set()
+            # 1) SQLite 优先
+            if self._is_sqlite():
+                try:
+                    rows = conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
+                    return {r[1] for r in rows} if rows else set()
+                except Exception as e:
+                    logger.warning(f"SQLite PRAGMA 读取字段失败（{table_name}）：{repr(e)}，将回退 MySQL 查询")
+
+            # 2) MySQL 查询
+            try:
+                rows = conn.execute(text("""
+                    SELECT COLUMN_NAME
+                    FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = :table_name
+                """), {"table_name": table_name}).fetchall()
+                return {r[0] for r in rows} if rows else set()
+            except Exception as e:
+                # 3) 最后一层回退：即使误走了 MySQL 分支，也再尝试一次 PRAGMA（避免你当前的 warning）
+                logger.warning(f"读取表字段失败（{table_name}）：{repr(e)}")
+                try:
+                    rows = conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
+                    return {r[1] for r in rows} if rows else set()
+                except Exception:
+                    return set()
+
         finally:
             if close_after:
                 try:
@@ -1614,28 +1815,67 @@ class DBUtils:
             logger.warning("训练记录为空，不插入")
             return None
 
-        payload = {
-            "sample_count": record.get("sample_count", 0),
-            "total_samples": record.get("total_samples", 0),
+        # 基础字段（原有）
+        payload: Dict[str, Any] = {
+            "sample_count": int(record.get("sample_count", 0) or 0),
+            "total_samples": int(record.get("total_samples", 0) or 0),
             "train_mode": record.get("train_mode", "未知"),
             "status": record.get("status", "unknown"),
             "message": record.get("message", ""),
-            "duration": record.get("duration", 0.0),
+            "duration": float(record.get("duration", 0.0) or 0.0),
             "train_time": record.get("train_time") or None,
+        }
+
+        # 新增字段（你已在 DB 侧加列）：仅当表里存在这些列时才写入，避免 MySQL/SQLite 差异造成插入失败
+        # 注意：evaluation_rmse 在 evaluation_invalid 时应为 NULL，这是“真实结果”，不是问题。
+        extra_payload = {
+            "evaluation_rmse": record.get("evaluation_rmse", None),
+            "eval_status": record.get("eval_status", None),
+            "publish_action": record.get("publish_action", None),
+            "publish": record.get("publish", None),
         }
 
         conn = self._get_connection()
         trans = conn.begin()
         try:
-            res = conn.execute(text(f"""
+            # 动态探测列：解决“库已迁移/未迁移”“mysql/sqlite 切换”等一致性问题
+            existing_cols = self._get_table_columns(self.TABLE_TRAIN, conn=conn)
+
+            cols = []
+            vals = []
+            final_payload: Dict[str, Any] = {}
+
+            # 1) 基础字段：必须写
+            for k in ["sample_count", "total_samples", "train_mode", "status", "message", "duration", "train_time"]:
+                if k in existing_cols:
+                    cols.append(k)
+                    vals.append(f":{k}")
+                    final_payload[k] = payload[k]
+
+            # 2) 扩展字段：表存在才写
+            for k, v in extra_payload.items():
+                if k in existing_cols:
+                    cols.append(k)
+                    vals.append(f":{k}")
+                    final_payload[k] = v
+
+            if not cols:
+                logger.error(f"训练记录插入失败：{self.TABLE_TRAIN} 表字段探测为空，请检查表是否存在/权限是否正常")
+                trans.rollback()
+                return None
+
+            sql = text(f"""
                 INSERT INTO {self.TABLE_TRAIN}
-                (sample_count, total_samples, train_mode, status, message, duration, train_time)
-                VALUES (:sample_count, :total_samples, :train_mode, :status, :message, :duration, :train_time)
-            """), payload)
+                ({", ".join(cols)})
+                VALUES ({", ".join(vals)})
+            """)
+            res = conn.execute(sql, final_payload)
             trans.commit()
+
             rid = getattr(res, "lastrowid", None)
             logger.debug(f"训练记录插入成功，ID={rid}")
             return rid
+
         except Exception as e:
             trans.rollback()
             logger.error(f"训练记录插入失败：{str(e)}", exc_info=True)

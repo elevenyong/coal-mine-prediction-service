@@ -113,10 +113,11 @@ class ModelEvaluator(ConfigUtils):
                 eval_size = eval_size or self.eval_size
                 if eval_size <= 0:
                     raise ValueError(f"评估样本数必须为正数，当前值：{eval_size}")
-                db_conf = db_utils.db_config
-                db_url = f"mysql+pymysql://{db_conf['user']}:{db_conf['password']}@" \
-                         f"{db_conf['host']}:{db_conf['port']}/{db_conf['db']}?charset={db_conf['charset']}"
-                engine = create_engine(db_url)
+                # 关键修复：评估必须复用 DBUtils.engine，禁止在此处硬编码 MySQL 重新建 engine
+                # 否则即便你把系统切到 SQLite，这里仍会连回 MySQL。
+                if db_utils is None or not hasattr(db_utils, "engine") or db_utils.engine is None:
+                    raise ValueError("db_utils.engine 不可用，无法从数据库读取评估集")
+                engine = db_utils.engine
                 # 修复：不要再用 p.*（p表里可能保留了与f表同名的增强特征列，导致重复列名）
                 # 改为：按“训练所需 + 目标 + 最少索引”动态显式选择 p 列，并显式选择 f 的增强特征列。
                 # 这样可以从根上消灭 duplicate labels，而不是依赖 pandas 事后去重。
@@ -209,77 +210,102 @@ class ModelEvaluator(ConfigUtils):
                     pass
                 # ====== 新增：按 measurement_date 留出最后N天作为评估集（更可信）======
                 if self.eval_split_mode == "time_holdout":
+                    time_holdout_used = False
+                    effective_holdout_days = None
+                    max_dt = None
+                    cutoff = None
+
                     if "measurement_date" not in eval_df.columns:
                         logger.warning("eval_split_mode=time_holdout，但评估数据缺少measurement_date，回退为latest策略")
                     else:
                         dt = pd.to_datetime(eval_df["measurement_date"], errors="coerce")
                         valid_mask = dt.notna()
-                        if valid_mask.sum() == 0:
+
+                        if int(valid_mask.sum()) == 0:
                             logger.warning("time_holdout：measurement_date解析失败（全为NaT），回退为latest策略")
                         else:
                             min_dt = dt[valid_mask].min()
-                        max_dt = dt[valid_mask].max()
-                        span_days = int((max_dt - min_dt).days) if (min_dt is not None and max_dt is not None) else 0
-                        uniq_dates = int(dt[valid_mask].dt.date.nunique())
-                        # 若数据跨度过短，time_holdout 形同虚设：自动降级到 latest + group 去重（可配置关闭）
-                        if self.short_span_backoff and (span_days < max(self.holdout_days, 1) or uniq_dates <= 2):
-                            logger.warning(
-                                f"time_holdout降级：日期跨度过短 span_days={span_days}, uniq_dates={uniq_dates}，"
-                                f"holdout_days={self.holdout_days}。将回退为 latest + (可选)group去重"
-                            )
-                        else:
-                            cutoff = max_dt - pd.Timedelta(days=max(self.holdout_days, 1))
-                            holdout_df = eval_df[valid_mask & (dt >= cutoff)].copy()
-                            # ====== P0：time_holdout + group_holdout（避免训练期/评估期 group 重叠导致指标虚高/虚低）======
-                            group_key = _choose_group_key(eval_df)
-                            if self.group_holdout_enabled and group_key and group_key in eval_df.columns:
-                                try:
-                                    train_period_df = eval_df[valid_mask & (dt < cutoff)].copy()
-                                    train_groups = set(
-                                        train_period_df[group_key].dropna().astype(str).unique().tolist()
-                                    )
-                                    before_n = len(holdout_df)
-                                    holdout_df2 = holdout_df[
-                                        ~holdout_df[group_key].astype(str).isin(train_groups)
-                                    ].copy()
-                                    after_n = len(holdout_df2)
+                            max_dt = dt[valid_mask].max()
+                            span_days = int((max_dt - min_dt).days) if (min_dt is not None and max_dt is not None) else 0
+                            uniq_dates = int(dt[valid_mask].dt.date.nunique())
 
-                                    # 若严格 group_holdout 导致样本过少，则回退到“纯时间 holdout”（但仍可做组内去重）
-                                    if after_n >= self.min_holdout_samples:
-                                        holdout_df = holdout_df2
-                                        logger.info(
-                                            f"time_holdout+group_holdout启用：group_key={group_key}，"
-                                            f"过滤训练期重复group：{before_n} → {after_n}（cutoff={cutoff.date()}）"
-                                        )
-                                    else:
-                                        logger.warning(
-                                            f"time_holdout+group_holdout样本不足：{after_n} < min_holdout_samples={self.min_holdout_samples}，"
-                                            f"回退为纯time_holdout（cutoff={cutoff.date()}）"
-                                        )
-                                except Exception as _e:
-                                    logger.warning(f"group_holdout处理失败（已忽略，继续纯time_holdout）：{repr(_e)}",
-                                                   exc_info=True)
-
-                            # （可选）评估集内部按group去重：同一group只留最近一条
-                            group_key2 = _choose_group_key(holdout_df)
-                            if self.eval_dedupe_by_group:
-                                holdout_df = _dedupe_eval_by_group(holdout_df, group_key2)
-
-                            if len(holdout_df) < self.min_holdout_samples:
+                            # 若数据跨度过短：不直接“降级 latest”，而是自适应收缩 holdout_days（只要 uniq_dates>=2）
+                            if uniq_dates < 2:
                                 logger.warning(
-                                    f"time_holdout：最后{self.holdout_days}天(含去重/过滤)样本数={len(holdout_df)} "
-                                    f"< 最小阈值{self.min_holdout_samples}，回退为latest策略"
+                                    f"time_holdout回退：可用日期不足以做时间留出 uniq_dates={uniq_dates}，回退为latest策略"
                                 )
                             else:
-                                # 保持“最近在前”的工程语义：仍按distance_from_entrance排序后取头部
-                                if "distance_from_entrance" in holdout_df.columns:
-                                    holdout_df = holdout_df.sort_values("distance_from_entrance", ascending=False)
-                                eval_df = holdout_df.head(eval_size).copy()
-                                logger.info(
-                                    f"time_holdout评估集启用：holdout_days={self.holdout_days}，"
-                                    f"实际评估样本数={len(eval_df)}，max_date={max_dt.date()}, cutoff={cutoff.date()}，"
-                                    f"span_days={span_days}, uniq_dates={uniq_dates}"
-                                )
+                                effective_holdout_days = max(1, min(int(self.holdout_days or 1), uniq_dates - 1))
+                                if effective_holdout_days != int(self.holdout_days or 1):
+                                    logger.info(
+                                        f"time_holdout调整：span_days={span_days}, uniq_dates={uniq_dates}, "
+                                        f"holdout_days={self.holdout_days} → effective_holdout_days={effective_holdout_days}"
+                                    )
+
+                                cutoff = max_dt - pd.Timedelta(days=effective_holdout_days)
+                                holdout_df = eval_df[valid_mask & (dt >= cutoff)].copy()
+
+                                # ====== P0：time_holdout + group_holdout（避免训练期/评估期 group 重叠导致指标虚高/虚低）======
+                                group_key = _choose_group_key(eval_df)
+                                if self.group_holdout_enabled and group_key and group_key in eval_df.columns:
+                                    try:
+                                        train_period_df = eval_df[valid_mask & (dt < cutoff)].copy()
+                                        train_groups = set(
+                                            train_period_df[group_key].dropna().astype(str).unique().tolist()
+                                        )
+                                        before_n = len(holdout_df)
+                                        holdout_df2 = holdout_df[
+                                            ~holdout_df[group_key].astype(str).isin(train_groups)
+                                        ].copy()
+                                        after_n = len(holdout_df2)
+
+                                        # 若严格 group_holdout 导致样本过少，则回退到“纯时间 holdout”（但仍可做组内去重）
+                                        if after_n >= self.min_holdout_samples:
+                                            holdout_df = holdout_df2
+                                            logger.info(
+                                                f"time_holdout+group_holdout启用：group_key={group_key}，"
+                                                f"过滤训练期重复group：{before_n} → {after_n}（cutoff={cutoff.date()}）"
+                                            )
+                                        else:
+                                            logger.warning(
+                                                f"time_holdout+group_holdout样本不足：{after_n} < min_holdout_samples={self.min_holdout_samples}，"
+                                                f"回退为纯time_holdout（cutoff={cutoff.date()}）"
+                                            )
+                                    except Exception as _e:
+                                        logger.warning(
+                                            f"group_holdout处理失败（已忽略，继续纯time_holdout）：{repr(_e)}",
+                                            exc_info=True
+                                        )
+
+                                # （可选）评估集内部按group去重：同一group只留最近一条
+                                group_key2 = _choose_group_key(holdout_df)
+                                if self.eval_dedupe_by_group:
+                                    holdout_df = _dedupe_eval_by_group(holdout_df, group_key2)
+
+                                if len(holdout_df) < self.min_holdout_samples:
+                                    logger.warning(
+                                        f"time_holdout：最后{effective_holdout_days}天(含去重/过滤)样本数={len(holdout_df)} "
+                                        f"< 最小阈值{self.min_holdout_samples}，回退为latest策略"
+                                    )
+                                else:
+                                    # 保持“最近在前”的工程语义：仍按distance_from_entrance排序后取头部
+                                    if "distance_from_entrance" in holdout_df.columns:
+                                        holdout_df = holdout_df.sort_values("distance_from_entrance", ascending=False)
+                                    eval_df = holdout_df.head(eval_size).copy()
+                                    time_holdout_used = True
+                                    logger.info(
+                                        f"time_holdout评估集启用：holdout_days={effective_holdout_days}，"
+                                        f"实际评估样本数={len(eval_df)}，max_date={max_dt.date()}, cutoff={cutoff.date()}，"
+                                        f"span_days={span_days}, uniq_dates={uniq_dates}"
+                                    )
+
+                    # 若 time_holdout 未能生效，则显式走 latest 策略（避免仅打印warning但评估集不按最新选取）
+                    if not time_holdout_used:
+                        if eval_df is not None and not eval_df.empty:
+                            if "distance_from_entrance" in eval_df.columns:
+                                eval_df = eval_df.sort_values("distance_from_entrance", ascending=False).head(eval_size).copy()
+                            else:
+                                eval_df = eval_df.head(eval_size).copy()
 
                 # 如果未启用time_holdout或回退，则沿用latest：按distance_from_entrance取前eval_size条
                 if len(eval_df) > eval_size:
@@ -644,9 +670,33 @@ class ModelEvaluator(ConfigUtils):
         if not eval_history or len(eval_history) < self.perf_window + 1:
             return False
 
-        recent_rmse = [h["avg_rmse"] for h in eval_history[-self.perf_window:]]
+        # -------------------------------
+        # 关键修复：过滤 None / 非数值 rmse
+        # 否则 sum([... None ...]) 会触发：float + NoneType
+        # -------------------------------
+        recent_rmse = []
+        for h in eval_history[-self.perf_window:]:
+            try:
+                v = h.get("avg_rmse") if isinstance(h, dict) else None
+                if v is None:
+                    continue
+                recent_rmse.append(float(v))
+            except Exception:
+                # 非法值直接跳过（保持鲁棒性，不影响主流程）
+                continue
+
+        # 若有效 rmse 不足，则不触发性能检查（避免误报/误触发）
+        if not recent_rmse:
+            logger.info("性能检测：最近窗口内无有效RMSE（可能尚未评估），跳过性能下降检查")
+            return False
+
         recent_avg = sum(recent_rmse) / len(recent_rmse)
-        baseline = baseline_rmse or recent_avg
+
+        # baseline_rmse 也可能为 None/非法，做同样兜底
+        try:
+            baseline = float(baseline_rmse) if baseline_rmse is not None else recent_avg
+        except Exception:
+            baseline = recent_avg
 
         # 防止除以零
         if baseline == 0:

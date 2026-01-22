@@ -256,7 +256,17 @@ class ModelPredictor:
                     pred_item = {tgt: predictions[tgt][i] for tgt in target_features}
 
                     # 补充标识信息（不再包含瓦斯涌出量）
-                    for col in ["id", "working_face", "roadway", "distance_from_entrance"]:
+                    # 关键增强：把输入的空间坐标一并回传（前端展示需要）
+                    # - 优先使用 x_coord/y_coord/z_coord
+                    # - 兼容部分调用方传 x/y/z
+                    for col in [
+                        "id",
+                        "working_face",
+                        "roadway",
+                        "distance_from_entrance",
+                        "x_coord", "y_coord", "z_coord",
+                        "x", "y", "z",
+                    ]:
                         if col in df.columns:
                             pred_item[col] = df.iloc[i][col]
 
